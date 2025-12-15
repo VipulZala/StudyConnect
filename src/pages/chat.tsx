@@ -35,7 +35,7 @@ export default function Chat({ chatId }: { chatId: string }) {
     <div className="container py-3">
       <div className="card">
         <div className="card-body">
-          <div style={{ height: 300, overflow: 'auto', border: '1px solid #dee2e6', padding: 8, borderRadius: '0.375rem', marginBottom: '1rem' }}>
+          <div className="bg-body-secondary" style={{ height: 300, overflow: 'auto', border: '1px solid var(--bs-border-color)', padding: 8, borderRadius: '0.375rem', marginBottom: '1rem' }}>
             {messages.map((m) => <div key={m._id || Math.random()} className="mb-1"><b>{m.sender}</b>: {m.content}</div>)}
           </div>
           <div className="d-flex gap-2">

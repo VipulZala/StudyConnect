@@ -618,11 +618,11 @@ const Messaging: React.FC = () => {
   };
 
   return (
-    <div className="w-100 bg-light min-vh-100">
+    <div className="w-100 min-vh-100">
       <div className="container-fluid p-0">
         <div className="d-flex" style={{ height: 'calc(100vh - 60px)' }}>
           {/* Conversation List */}
-          <div className={`col-12 col-md-4 col-lg-3 bg-white border-end d-flex flex-column ${selectedConversation ? 'd-none d-md-flex' : 'd-flex'}`}>
+          <div className={`col-12 col-md-4 col-lg-3 bg-body border-end d-flex flex-column ${selectedConversation ? 'd-none d-md-flex' : 'd-flex'}`}>
             <div className="p-3 border-bottom">
               <h1 className="h4 fw-bold mb-3">Messages</h1>
               <div className="position-relative">
@@ -693,7 +693,7 @@ const Messaging: React.FC = () => {
             {selectedConversation ? (
               <>
                 {/* Conversation Header */}
-                <div className="p-3 border-bottom bg-white d-flex align-items-center justify-content-between">
+                <div className="p-3 border-bottom bg-body d-flex align-items-center justify-content-between">
                   <div className="d-flex align-items-center">
                     <button className="btn btn-link link-dark p-0 me-3 d-md-none" onClick={handleBackToConversations}>
                       <ArrowLeftIcon size={24} />
@@ -732,7 +732,7 @@ const Messaging: React.FC = () => {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-grow-1 overflow-y-auto p-4 bg-light">
+                <div className="flex-grow-1 overflow-y-auto p-4 bg-body-tertiary">
                   <div className="d-flex flex-column gap-3">
                     {messages.map(message => {
                       const isOwn = message.sender._id === user?.id;
@@ -749,7 +749,7 @@ const Messaging: React.FC = () => {
                             />
                           )}
                           <div
-                            className={`p-3 rounded-3 ${isOwn ? 'bg-primary text-white rounded-bottom-end-0' : 'bg-white text-dark rounded-bottom-start-0 shadow-sm'}`}
+                            className={`p-3 rounded-3 ${isOwn ? 'bg-primary text-white rounded-bottom-end-0' : 'bg-body-secondary text-body rounded-bottom-start-0 shadow-sm'}`}
                             style={{ maxWidth: '75%' }}
                           >
                             {renderMessageContent(message)}
@@ -765,9 +765,9 @@ const Messaging: React.FC = () => {
                 </div>
 
                 {/* Message Input */}
-                <div className="p-3 border-top bg-white">
+                <div className="p-3 border-top bg-body">
                   {selectedFile && (
-                    <div className="mb-2 p-2 bg-light rounded d-flex align-items-center gap-2">
+                    <div className="mb-2 p-2 bg-body-secondary rounded d-flex align-items-center gap-2">
                       {filePreview ? (
                         <img src={filePreview} alt="Preview" className="rounded" style={{ width: '50px', height: '50px', objectFit: 'cover' }} />
                       ) : (
@@ -839,7 +839,7 @@ const Messaging: React.FC = () => {
                 </div>
               </>
             ) : (
-              <div className="flex-grow-1 d-flex align-items-center justify-content-center bg-light">
+              <div className="flex-grow-1 d-flex align-items-center justify-content-center bg-body">
                 <div className="text-center">
                   <div className="text-muted mb-4">
                     <svg className="mx-auto" width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24">

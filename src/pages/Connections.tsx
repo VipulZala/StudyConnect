@@ -87,7 +87,7 @@ const Connections: React.FC = () => {
     }
     return true;
   });
-  return <div className="w-100 bg-light min-vh-100">
+  return <div className="w-100 min-vh-100">
     <div className="container py-5">
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
         <div>

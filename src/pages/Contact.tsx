@@ -52,7 +52,7 @@ const Contact: React.FC = () => {
       </div>
     </section>
     {/* Contact Form & Info Section */}
-    <section className="py-5 bg-white">
+    <section className="py-5 bg-body">
       <div className="container py-5">
         <div className="row">
           {/* Contact Information */}
@@ -185,7 +185,7 @@ const Contact: React.FC = () => {
       </div>
     </section>
     {/* FAQ Section */}
-    <section className="py-5 bg-light">
+    <section className="py-5 bg-body-tertiary">
       <div className="container py-5">
         <h2 className="text-center fw-bold mb-5">
           Frequently Asked Questions

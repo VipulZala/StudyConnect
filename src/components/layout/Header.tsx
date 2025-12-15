@@ -5,6 +5,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { SunIcon, MoonIcon, MenuIcon, XIcon, LogOutIcon } from 'lucide-react';
 
 
+import logo from '../../assets/logo.jpg';
+
 const Header: React.FC = () => {
   const {
     theme,
@@ -47,12 +49,8 @@ const Header: React.FC = () => {
   return <header className="navbar navbar-expand-md bg-body-tertiary shadow-sm">
     <div className="container-fluid px-4">
       <Link to="/" className="navbar-brand d-flex align-items-center gap-2">
-        <div className="d-flex align-items-center justify-content-center bg-primary rounded-circle" style={{ width: '40px', height: '40px' }}>
-          <span className="text-white fw-bold fs-5">SC</span>
-        </div>
-        <span className="fs-4 fw-bold text-primary">
-          StudyConnect
-        </span>
+        <img src={logo} alt="StudyConnect" style={{ height: '60px', width: 'auto', borderRadius: '50%' }} />
+        <span className="fs-4 fw-bold text-primary">StudyConnect</span>
       </Link>
 
       {/* Desktop Navigation */}

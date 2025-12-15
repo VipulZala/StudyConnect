@@ -16,7 +16,7 @@ const About: React.FC = () => {
       </div>
     </section>
     {/* Our Story Section */}
-    <section className="py-5 bg-white">
+    <section className="py-5 bg-body">
       <div className="container py-5">
         <div className="row align-items-center">
           <div className="col-md-6 mb-5 mb-md-0 pe-md-5">
@@ -38,7 +38,7 @@ const About: React.FC = () => {
       </div>
     </section>
     {/* Mission & Values Section */}
-    <section className="py-5 bg-light">
+    <section className="py-5 bg-body-tertiary">
       <div className="container py-5">
         <h2 className="text-center fw-bold mb-5">
           Our Mission & Values
@@ -85,7 +85,7 @@ const About: React.FC = () => {
       </div>
     </section>
     {/* Features Section */}
-    <section className="py-5 bg-white">
+    <section className="py-5 bg-body">
       <div className="container py-5">
         <h2 className="text-center fw-bold mb-5">
           What Makes Us Different
@@ -163,7 +163,7 @@ const About: React.FC = () => {
       </div>
     </section>
     {/* Team Section */}
-    <section className="py-5 bg-light">
+    <section className="py-5 bg-body-tertiary">
       <div className="container py-5">
         <h2 className="text-center fw-bold mb-5">
           Meet Our Team

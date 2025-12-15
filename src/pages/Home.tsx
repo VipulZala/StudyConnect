@@ -31,7 +31,7 @@ const Home: React.FC = () => {
       </div>
     </section>
     {/* Features Section */}
-    <section className="py-5 bg-light">
+    <section className="py-5 bg-body-tertiary">
       <div className="container py-5">
         <h2 className="text-center fw-bold mb-5">
           How StudyConnect Works
@@ -97,7 +97,7 @@ const Home: React.FC = () => {
       </div>
     </section>
     {/* CTA Section */}
-    <section className="py-5 bg-white">
+    <section className="py-5 bg-body">
       <div className="container py-5 text-center">
         <h2 className="fw-bold mb-4">
           Ready to boost your academic success?
@@ -112,7 +112,7 @@ const Home: React.FC = () => {
       </div>
     </section>
     {/* Testimonials Section */}
-    <section className="py-5 bg-light">
+    <section className="py-5 bg-body-tertiary">
       <div className="container py-5">
         <h2 className="text-center fw-bold mb-5">
           What Students Say

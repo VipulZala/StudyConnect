@@ -1,17 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import logo from '../../assets/logo.jpg';
+
 const Footer: React.FC = () => {
-  return <footer className="bg-white shadow-sm mt-auto border-top">
+  return <footer className="bg-body-tertiary shadow-sm mt-auto border-top">
     <div className="container py-5">
       <div className="row g-4">
         <div className="col-12 col-md-3">
           <Link to="/" className="d-flex align-items-center gap-2 mb-3 text-decoration-none">
-            <div className="d-flex align-items-center justify-content-center bg-primary rounded-circle" style={{ width: '32px', height: '32px' }}>
-              <span className="text-white fw-bold small">SC</span>
-            </div>
-            <span className="fs-5 fw-bold text-primary">
-              StudyConnect
-            </span>
+            <img src={logo} alt="StudyConnect" style={{ height: '50px', width: 'auto', borderRadius: '50%' }} />
+            <span className="fs-5 fw-bold text-primary">StudyConnect</span>
           </Link>
           <p className="small text-muted">
             Connect, collaborate, and succeed with fellow students around the

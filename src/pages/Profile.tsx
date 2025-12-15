@@ -448,7 +448,7 @@ export default function Profile() {
                   </div>
                   <div className="d-flex flex-wrap gap-2">
                     {formData.interests.map((interest, i) => (
-                      <span key={i} className="badge bg-light text-dark border d-flex align-items-center gap-1">
+                      <span key={i} className="badge bg-body-secondary text-body border d-flex align-items-center gap-1">
                         {interest}
                         <X size={14} className="cursor-pointer" onClick={() => removeInterest(interest)} style={{ cursor: 'pointer' }} />
                       </span>
@@ -458,7 +458,7 @@ export default function Profile() {
               ) : displayInterests.length > 0 ? (
                 <div className="d-flex flex-wrap gap-2">
                   {displayInterests.map((interest, i) => (
-                    <span key={i} className="badge bg-light text-dark border rounded-pill px-3 py-2">
+                    <span key={i} className="badge bg-body-secondary text-body border rounded-pill px-3 py-2">
                       {interest}
                     </span>
                   ))}

@@ -5,11 +5,11 @@ export default function AuthLayout({ children, title, subtitle }: {
   children: React.ReactNode; title?: string; subtitle?: string;
 }) {
   return (
-    <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+    <div className="min-vh-100 d-flex align-items-center justify-content-center">
       <div className="container" style={{ maxWidth: '1024px' }}>
-        <div className="row bg-white shadow rounded-4 overflow-hidden">
+        <div className="row bg-body shadow rounded-4 overflow-hidden border">
           <div className="col-12 col-md-6 p-5">
-            <h1 className="fw-bold text-dark mb-2">{title}</h1>
+            <h1 className="fw-bold text-body mb-2">{title}</h1>
             {subtitle && <p className="text-muted">{subtitle}</p>}
             <div className="mt-4">
               {children}
