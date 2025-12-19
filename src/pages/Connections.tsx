@@ -1,80 +1,93 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SearchIcon, FilterIcon, UserPlusIcon, MessageSquareIcon } from 'lucide-react';
-// Mock data for connections
-const MOCK_CONNECTIONS = [{
-  id: 1,
-  name: 'Vivek Pathak',
-  major: 'Computer Science',
-  year: 'Junior',
-  university: 'Delhi University',
-  interests: ['Machine Learning', 'Web Development', 'Algorithms'],
-  skills: ['Python', 'React', 'TensorFlow'],
-  avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-  mutualConnections: 3
-}, {
-  id: 2,
-  name: 'Nisha Sharma',
-  major: 'Data Science',
-  year: 'Senior',
-  university: 'MIT',
-  interests: ['Big Data', 'AI Ethics', 'Data Visualization'],
-  skills: ['R', 'SQL', 'Tableau', 'Python'],
-  avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-  mutualConnections: 5
-}, {
-  id: 3,
-  name: 'Marcus Rodriguez',
-  major: 'Electrical Engineering',
-  year: 'Graduate Student',
-  university: 'Georgia Tech',
-  interests: ['Robotics', 'IoT', 'Embedded Systems'],
-  skills: ['Arduino', 'C++', 'PCB Design'],
-  avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-  mutualConnections: 2
-}, {
-  id: 4,
-  name: 'Priya Patel',
-  major: 'Biology',
-  year: 'Sophomore',
-  university: 'UC Berkeley',
-  interests: ['Genetics', 'Molecular Biology', 'Bioinformatics'],
-  skills: ['CRISPR', 'Lab Techniques', 'R'],
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-  mutualConnections: 1
-}, {
-  id: 5,
-  name: 'David Wilson',
-  major: 'Business Administration',
-  year: 'Senior',
-  university: 'NYU',
-  interests: ['Entrepreneurship', 'Marketing', 'Finance'],
-  skills: ['Market Research', 'Excel', 'Public Speaking'],
-  avatar: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-  mutualConnections: 4
-}, {
-  id: 6,
-  name: 'Emma Thompson',
-  major: 'Psychology',
-  year: 'Junior',
-  university: 'UCLA',
-  interests: ['Cognitive Psychology', 'Research Methods', 'Mental Health'],
-  skills: ['SPSS', 'Experimental Design', 'Data Analysis'],
-  avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-  mutualConnections: 3
-}];
+import { useAuth } from '../contexts/AuthContext';
+import { apiFetch } from '../lib/api';
+
+interface Connection {
+  id: string;
+  name: string;
+  major: string;
+  year: string;
+  university: string;
+  interests: string[];
+  skills: string[];
+  avatar: string;
+  mutualConnections: number;
+}
+
 // Mock data for universities
-const UNIVERSITIES = ['All Universities', 'Stanford University', 'MIT', 'Georgia Tech', 'UC Berkeley', 'NYU', 'UCLA'];
+const UNIVERSITIES = ['All Universities', 'Stanford University', 'MIT', 'Georgia Tech', 'UC Berkeley', 'NYU', 'UCLA', 'Delhi University'];
 // Mock data for majors
 const MAJORS = ['All Majors', 'Computer Science', 'Data Science', 'Electrical Engineering', 'Biology', 'Business Administration', 'Psychology'];
 const Connections: React.FC = () => {
+  const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUniversity, setSelectedUniversity] = useState('All Universities');
   const [selectedMajor, setSelectedMajor] = useState('All Majors');
   const [showFilters, setShowFilters] = useState(false);
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const users = await apiFetch('/users');
+
+      // Transform backend user data to Connection format
+      const transformedUsers: Connection[] = users
+        .filter((u: any) => u._id !== currentUser?._id && u._id !== currentUser?.id) // Exclude current user
+        .map((u: any) => ({
+          id: u._id || u.id,
+          name: u.name || 'Unknown User',
+          major: u.profile?.course || 'Not specified',
+          year: u.profile?.semester || 'Not specified',
+          university: u.profile?.college || 'Not specified',
+          interests: u.profile?.interests || [],
+          skills: (u.profile?.skills || []).map((s: string) => s.split(' - ')[0]), // Remove skill level
+          avatar: u.profile?.avatarUrl || u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || 'User')}`,
+          mutualConnections: 0 // TODO: Calculate actual mutual connections
+        }));
+
+      setConnections(transformedUsers);
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+      setConnections([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddConnection = async (userId: string) => {
+    try {
+      await apiFetch('/connections/request', {
+        method: 'POST',
+        body: { recipientId: userId }
+      });
+
+      alert('Connection request sent successfully!');
+      // Optionally refresh the connections list to update UI
+      fetchUsers();
+    } catch (err: any) {
+      console.error('Failed to send connection request:', err);
+      alert(err?.message || 'Failed to send connection request');
+    }
+  };
+
+  const handleMessage = (userId: string, userName: string) => {
+    // Navigate to messaging page
+    // You can pass state to pre-select this conversation or create a new one
+    navigate('/messaging', { state: { userId, userName } });
+  };
   // Filter connections based on search query and filters
-  const filteredConnections = MOCK_CONNECTIONS.filter(connection => {
+  const filteredConnections = connections.filter((connection: Connection) => {
     // Apply search query filter
-    if (searchQuery && !connection.name.toLowerCase().includes(searchQuery.toLowerCase()) && !connection.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase())) && !connection.interests.some(interest => interest.toLowerCase().includes(searchQuery.toLowerCase()))) {
+    if (searchQuery && !connection.name.toLowerCase().includes(searchQuery.toLowerCase()) && !connection.skills.some((skill: string) => skill.toLowerCase().includes(searchQuery.toLowerCase())) && !connection.interests.some((interest: string) => interest.toLowerCase().includes(searchQuery.toLowerCase()))) {
       return false;
     }
     // Apply university filter
@@ -135,7 +148,14 @@ const Connections: React.FC = () => {
       </div>
       {/* Connection Results */}
       <div className="row g-4">
-        {filteredConnections.length > 0 ? filteredConnections.map(connection => <div key={connection.id} className="col-md-6 col-lg-4">
+        {loading ? (
+          <div className="col-12 text-center py-5">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="text-muted mt-3">Loading connections...</p>
+          </div>
+        ) : filteredConnections.length > 0 ? filteredConnections.map((connection: Connection) => <div key={connection.id} className="col-md-6 col-lg-4">
           <div className="card h-100 border-0 shadow-sm overflow-hidden hover-transform transition-all">
             <div className="card-body p-4">
               <div className="d-flex align-items-center mb-4">
@@ -178,10 +198,18 @@ const Connections: React.FC = () => {
                   {connection.mutualConnections !== 1 ? 's' : ''}
                 </span>
                 <div className="d-flex gap-2">
-                  <button className="btn btn-light rounded-circle p-2 text-primary bg-primary-subtle border-0">
+                  <button
+                    className="btn btn-light rounded-circle p-2 text-primary bg-primary-subtle border-0"
+                    onClick={() => handleMessage(connection.id, connection.name)}
+                    title="Send Message"
+                  >
                     <MessageSquareIcon size={18} />
                   </button>
-                  <button className="btn btn-light rounded-circle p-2 text-success bg-success-subtle border-0">
+                  <button
+                    className="btn btn-light rounded-circle p-2 text-success bg-success-subtle border-0"
+                    onClick={() => handleAddConnection(connection.id)}
+                    title="View Profile"
+                  >
                     <UserPlusIcon size={18} />
                   </button>
                 </div>

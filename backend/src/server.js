@@ -106,6 +106,12 @@ try {
   console.warn('uploadRoutes not loaded:', err && err.message);
 }
 
+try {
+  app.use('/api/v1/connections', require('./routes/connectionRoutes')); // connection requests
+} catch (err) {
+  console.warn('connectionRoutes not loaded:', err && err.message);
+}
+
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 

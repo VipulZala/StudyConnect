@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../lib/api';
 import {
   Briefcase, Calendar, User as UserIcon, BookOpen,
   Edit2, Save, X, Building, GraduationCap,
-  Mail, Phone, Plus
+  Mail, Phone, Plus, Camera, Check, XCircle
 } from 'lucide-react';
 
 interface ProfileData {
@@ -26,6 +26,19 @@ interface ProfileData {
   };
 }
 
+interface ConnectionRequest {
+  _id: string;
+  requester: {
+    _id: string;
+    name: string;
+    email: string;
+    profile?: { avatarUrl?: string };
+    avatarUrl?: string;
+  };
+  status: string;
+  createdAt: string;
+}
+
 export default function Profile() {
   const { id } = useParams();
   const { user: currentUser } = useAuth();
@@ -34,6 +47,7 @@ export default function Profile() {
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [connectionRequests, setConnectionRequests] = useState<ConnectionRequest[]>([]);
 
   // Form state for editing
   const [formData, setFormData] = useState({
@@ -48,13 +62,27 @@ export default function Profile() {
   });
 
   const [newSkill, setNewSkill] = useState('');
+  const [newSkillLevel, setNewSkillLevel] = useState('Beginner');
   const [newInterest, setNewInterest] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isOwnProfile = !id || id === currentUser?._id || id === currentUser?.id;
 
   useEffect(() => {
     fetchProfile();
+    if (isOwnProfile) {
+      fetchConnectionRequests();
+    }
   }, [id, currentUser]);
+
+  const fetchConnectionRequests = async () => {
+    try {
+      const requests = await apiFetch('/connections/requests');
+      setConnectionRequests(requests);
+    } catch (err) {
+      console.error('Failed to fetch connection requests:', err);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -143,10 +171,48 @@ export default function Profile() {
     setError('');
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const data = new FormData();
+    data.append('file', file);
+
+    try {
+      const response = await apiFetch('/upload', {
+        method: 'POST',
+        body: data,
+        isFormData: true
+      });
+      setFormData(prev => ({ ...prev, avatarUrl: response.url }));
+    } catch (err: any) {
+      console.error('Error uploading image:', err);
+      setError('Failed to upload image. Please try again.');
+    }
+  };
+
+  const getImageUrl = (url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('data:')) return url;
+
+    // Construct full URL for uploaded files
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+    try {
+      const origin = new URL(apiUrl).origin;
+      if (url.startsWith('/')) return `${origin}${url}`;
+      return `${origin}/${url}`;
+    } catch (e) {
+      return url;
+    }
+  };
+
   const addSkill = () => {
-    if (newSkill.trim() && !formData.skills.includes(newSkill.trim())) {
-      setFormData({ ...formData, skills: [...formData.skills, newSkill.trim()] });
-      setNewSkill('');
+    if (newSkill.trim()) {
+      const skillString = `${newSkill.trim()} - ${newSkillLevel}`;
+      if (!formData.skills.includes(skillString)) {
+        setFormData({ ...formData, skills: [...formData.skills, skillString] });
+        setNewSkill('');
+      }
     }
   };
 
@@ -163,6 +229,30 @@ export default function Profile() {
 
   const removeInterest = (interest: string) => {
     setFormData({ ...formData, interests: formData.interests.filter(i => i !== interest) });
+  };
+
+  const handleAcceptRequest = async (connectionId: string) => {
+    try {
+      await apiFetch(`/connections/accept/${connectionId}`, { method: 'PUT' });
+      // Refresh connection requests
+      fetchConnectionRequests();
+      alert('Connection request accepted!');
+    } catch (err: any) {
+      console.error('Failed to accept request:', err);
+      alert(err?.message || 'Failed to accept request');
+    }
+  };
+
+  const handleRejectRequest = async (connectionId: string) => {
+    try {
+      await apiFetch(`/connections/reject/${connectionId}`, { method: 'PUT' });
+      // Refresh connection requests
+      fetchConnectionRequests();
+      alert('Connection request rejected');
+    } catch (err: any) {
+      console.error('Failed to reject request:', err);
+      alert(err?.message || 'Failed to reject request');
+    }
   };
 
   if (loading) {
@@ -207,29 +297,94 @@ export default function Profile() {
         </div>
       )}
 
+      {/* Connection Requests Section - Only show on own profile */}
+      {isOwnProfile && connectionRequests.length > 0 && (
+        <div className="alert alert-info border-0 shadow-sm mb-4">
+          <h5 className="alert-heading mb-3">
+            <UserIcon size={20} className="me-2" />
+            Connection Requests ({connectionRequests.length})
+          </h5>
+          <div className="d-flex flex-column gap-3">
+            {connectionRequests.map((request) => (
+              <div key={request._id} className="d-flex align-items-center justify-content-between bg-white rounded p-3">
+                <div className="d-flex align-items-center gap-3">
+                  <img
+                    src={request.requester.profile?.avatarUrl || request.requester.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(request.requester.name)}`}
+                    alt={request.requester.name}
+                    className="rounded-circle"
+                    width="48"
+                    height="48"
+                    style={{ objectFit: 'cover' }}
+                  />
+                  <div>
+                    <h6 className="mb-0">{request.requester.name}</h6>
+                    <small className="text-muted">{request.requester.email}</small>
+                  </div>
+                </div>
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-success btn-sm d-flex align-items-center gap-1"
+                    onClick={() => handleAcceptRequest(request._id)}
+                  >
+                    <Check size={16} />
+                    Accept
+                  </button>
+                  <button
+                    className="btn btn-outline-danger btn-sm d-flex align-items-center gap-1"
+                    onClick={() => handleRejectRequest(request._id)}
+                  >
+                    <XCircle size={16} />
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Header Section */}
       <div className="card mb-4 border-0 shadow-sm">
         <div className="card-body p-4">
           <div className="d-flex align-items-start gap-4">
             {/* Avatar */}
+            {/* Avatar */}
             <div className="position-relative">
-              {displayAvatar ? (
-                <img
-                  src={displayAvatar}
-                  alt={displayName}
-                  className="rounded-circle border border-3 border-primary"
-                  width="120"
-                  height="120"
-                  style={{ objectFit: 'cover' }}
-                />
-              ) : (
-                <div
-                  className="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center border border-3 border-primary"
-                  style={{ width: 120, height: 120, fontSize: '3rem', fontWeight: 'bold' }}
-                >
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
-              )}
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="d-none"
+                accept="image/*"
+                onChange={handleImageUpload}
+              />
+              <div
+                className={`position-relative ${editMode ? 'cursor-pointer' : ''}`}
+                onClick={() => editMode && fileInputRef.current?.click()}
+                style={{ cursor: editMode ? 'pointer' : 'default' }}
+              >
+                {displayAvatar ? (
+                  <img
+                    src={getImageUrl(displayAvatar)}
+                    alt={displayName}
+                    className="rounded-circle border border-3 border-primary"
+                    width="120"
+                    height="120"
+                    style={{ objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div
+                    className="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center border border-3 border-primary"
+                    style={{ width: 120, height: 120, fontSize: '3rem', fontWeight: 'bold' }}
+                  >
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                {editMode && (
+                  <div className="position-absolute top-0 start-0 w-100 h-100 rounded-circle bg-dark bg-opacity-50 d-flex align-items-center justify-content-center opacity-0 hover-opacity-100 transition-opacity" style={{ transition: 'opacity 0.2s' }}>
+                    <Camera className="text-white" size={32} />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Profile Info */}
@@ -392,34 +547,57 @@ export default function Profile() {
                       className="form-control form-control-sm"
                       value={newSkill}
                       onChange={(e) => setNewSkill(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
                       placeholder="Add a skill"
                     />
+                    <select
+                      className="form-select form-select-sm"
+                      style={{ width: '130px' }}
+                      value={newSkillLevel}
+                      onChange={(e) => setNewSkillLevel(e.target.value)}
+                    >
+                      <option value="Beginner">Beginner</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Expert">Expert</option>
+                    </select>
                     <button className="btn btn-sm btn-primary" onClick={addSkill}>
                       <Plus size={16} />
                     </button>
                   </div>
                   <div className="d-flex flex-wrap gap-2">
-                    {formData.skills.map((skill, i) => (
-                      <span key={i} className="badge bg-primary d-flex align-items-center gap-1">
-                        {skill}
-                        <X size={14} className="cursor-pointer" onClick={() => removeSkill(skill)} style={{ cursor: 'pointer' }} />
-                      </span>
-                    ))}
+                    {formData.skills.map((skill, i) => {
+                      const [name, level] = skill.includes(' - ') ? skill.split(' - ') : [skill, ''];
+                      return (
+                        <span key={i} className="badge bg-primary d-flex align-items-center gap-1">
+                          {name} {level && <span className="opacity-75 small">({level})</span>}
+                          <X size={14} className="cursor-pointer" onClick={() => removeSkill(skill)} style={{ cursor: 'pointer' }} />
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               ) : displaySkills.length > 0 ? (
                 <div className="d-flex flex-column gap-3">
-                  {displaySkills.map((skill, i) => (
-                    <div key={i}>
-                      <div className="d-flex justify-content-between mb-1">
-                        <span>{skill}</span>
+                  {displaySkills.map((skill, i) => {
+                    const [name, level] = skill.includes(' - ') ? skill.split(' - ') : [skill, ''];
+                    let barColor = 'bg-primary';
+                    let width = '50%';
+
+                    if (level === 'Beginner') { barColor = 'bg-info'; width = '33%'; }
+                    else if (level === 'Intermediate') { barColor = 'bg-warning'; width = '66%'; }
+                    else if (level === 'Expert') { barColor = 'bg-success'; width = '100%'; }
+
+                    return (
+                      <div key={i}>
+                        <div className="d-flex justify-content-between mb-1">
+                          <span>{name}</span>
+                          {level && <span className={`badge ${barColor} text-white`}>{level}</span>}
+                        </div>
+                        <div className="progress" style={{ height: 6 }}>
+                          <div className={`progress-bar ${barColor}`} style={{ width }}></div>
+                        </div>
                       </div>
-                      <div className="progress" style={{ height: 6 }}>
-                        <div className="progress-bar bg-primary" style={{ width: `${Math.max(40, 100 - i * 10)}%` }}></div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-muted small">No skills added yet.</p>

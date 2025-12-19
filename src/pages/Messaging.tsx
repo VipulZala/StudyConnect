@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { SearchIcon, SendIcon, PaperclipIcon, MoreVerticalIcon, PhoneIcon, VideoIcon, XIcon, FileIcon, DownloadIcon, ArrowLeftIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../hooks/useSocket';
@@ -208,6 +209,7 @@ const DUMMY_MESSAGES: { [key: string]: Message[] } = {
 
 const Messaging: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const token = localStorage.getItem('sc_token');
   const { socket, isConnected } = useSocket(token);
 
@@ -234,6 +236,57 @@ const Messaging: React.FC = () => {
   useEffect(() => {
     fetchConversations();
   }, [user]);
+
+  // Handle opening a specific user's chat from Connections page
+  useEffect(() => {
+    const state = location.state as { userId?: string; userName?: string } | null;
+    if (state?.userId && user) {
+      openChatWithUser(state.userId, state.userName || 'User');
+    }
+  }, [location.state, user]);
+
+  const openChatWithUser = async (userId: string, userName: string) => {
+    try {
+      // Create chatId (consistent format: smaller ID first)
+      const ids = [user?.id || user?._id || '', userId].sort();
+      const chatId = `${ids[0]}-${ids[1]}`;
+
+      // Fetch user data
+      const userData = await apiFetch(`/users/${userId}`);
+
+      // Create conversation object
+      const newConversation: Conversation = {
+        chatId,
+        user: {
+          id: userId,
+          name: userData.name || userName,
+          email: userData.email || '',
+          avatar: userData.profile?.avatarUrl || userData.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}`,
+          online: false
+        },
+        lastMessage: {
+          text: '',
+          timestamp: new Date().toISOString(),
+          read: true
+        },
+        unreadCount: 0
+      };
+
+      // Check if conversation already exists
+      const existingConv = conversations.find(c => c.chatId === chatId);
+      if (existingConv) {
+        setSelectedConversation(existingConv);
+        fetchMessages(chatId);
+      } else {
+        // Add to conversations list
+        setConversations(prev => [newConversation, ...prev]);
+        setSelectedConversation(newConversation);
+        fetchMessages(chatId);
+      }
+    } catch (err) {
+      console.error('Failed to open chat with user:', err);
+    }
+  };
 
   // Socket event listeners
   useEffect(() => {
@@ -618,11 +671,11 @@ const Messaging: React.FC = () => {
   };
 
   return (
-    <div className="w-100 min-vh-100">
-      <div className="container-fluid p-0">
-        <div className="d-flex" style={{ height: 'calc(100vh - 60px)' }}>
+    <div className="w-100" style={{ minHeight: 'calc(100vh - 60px)' }}>
+      <div className="container-fluid p-0" style={{ height: 'calc(100vh - 60px)' }}>
+        <div className="row g-0 h-100">
           {/* Conversation List */}
-          <div className={`col-12 col-md-4 col-lg-3 bg-body border-end d-flex flex-column ${selectedConversation ? 'd-none d-md-flex' : 'd-flex'}`}>
+          <div className={`col-12 col-md-6 col-lg-5 col-xl-4 bg-body border-end d-flex flex-column h-100 ${selectedConversation ? 'd-none d-md-flex' : 'd-flex'}`}>
             <div className="p-3 border-bottom">
               <h1 className="h4 fw-bold mb-3">Messages</h1>
               <div className="position-relative">
@@ -639,7 +692,7 @@ const Messaging: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex-grow-1 overflow-y-auto">
+            <div className="flex-grow-1">
               {filteredConversations.length === 0 ? (
                 <div className="text-center p-4 text-muted">
                   <p>No conversations yet</p>
@@ -689,7 +742,7 @@ const Messaging: React.FC = () => {
           </div>
 
           {/* Conversation View */}
-          <div id="chat-column" className={`col-12 col-md-8 col-lg-9 d-flex flex-column ${!selectedConversation ? 'd-none d-md-flex' : 'd-flex'}`}>
+          <div id="chat-column" className={`col-12 col-md-6 col-lg-7 col-xl-8 d-flex flex-column h-100 ${!selectedConversation ? 'd-none d-md-flex' : 'd-flex'}`}>
             {selectedConversation ? (
               <>
                 {/* Conversation Header */}
@@ -732,7 +785,7 @@ const Messaging: React.FC = () => {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-grow-1 overflow-y-auto p-4 bg-body-tertiary">
+                <div className="flex-grow-1 overflow-auto p-4 bg-body-tertiary" style={{ maxHeight: 'calc(100vh - 240px)' }}>
                   <div className="d-flex flex-column gap-3">
                     {messages.map(message => {
                       const isOwn = message.sender._id === user?.id;
@@ -765,7 +818,7 @@ const Messaging: React.FC = () => {
                 </div>
 
                 {/* Message Input */}
-                <div className="p-3 border-top bg-body">
+                <div className="p-3 border-top bg-body" style={{ minHeight: '80px' }}>
                   {selectedFile && (
                     <div className="mb-2 p-2 bg-body-secondary rounded d-flex align-items-center gap-2">
                       {filePreview ? (
@@ -818,9 +871,10 @@ const Messaging: React.FC = () => {
                             handleSendMessage(e);
                           }
                         }}
-                        placeholder="Type a message..."
-                        className="form-control resize-none"
-                        rows={1}
+                        placeholder="Type a message... (Shift+Enter for new line)"
+                        className="form-control"
+                        rows={2}
+                        style={{ resize: 'none', minHeight: '50px', maxHeight: '120px' }}
                         disabled={uploading}
                       />
                     </div>
