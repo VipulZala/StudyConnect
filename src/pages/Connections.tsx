@@ -16,10 +16,45 @@ interface Connection {
   mutualConnections: number;
 }
 
-// Mock data for universities
-const UNIVERSITIES = ['All Universities', 'Stanford University', 'MIT', 'Georgia Tech', 'UC Berkeley', 'NYU', 'UCLA', 'Delhi University'];
-// Mock data for majors
-const MAJORS = ['All Majors', 'Computer Science', 'Data Science', 'Electrical Engineering', 'Biology', 'Business Administration', 'Psychology'];
+// Indian Universities
+const UNIVERSITIES = [
+  'All Universities',
+  'Indian Institute of Technology Bombay',
+  'Indian Institute of Technology Delhi',
+  'Indian Institute of Technology Madras',
+  'Indian Institute of Technology Kanpur',
+  'Indian Institute of Technology Kharagpur',
+  'University of Delhi',
+  'Jawaharlal Nehru University',
+  'Banaras Hindu University',
+  'Anna University',
+  'Mumbai University',
+  'BITS Pilani',
+  'Vellore Institute of Technology',
+  'Manipal Academy of Higher Education',
+  'Amity University',
+  'SRM Institute of Science and Technology'
+];
+
+// Trending Majors in India
+const MAJORS = [
+  'All Majors',
+  'Computer Science Engineering',
+  'Information Technology',
+  'Electronics and Communication',
+  'Mechanical Engineering',
+  'Civil Engineering',
+  'Data Science',
+  'Artificial Intelligence',
+  'Machine Learning',
+  'Business Administration (MBA)',
+  'Commerce (B.Com)',
+  'Economics',
+  'Psychology',
+  'Medicine (MBBS)',
+  'Law (LLB)',
+  'Bi Biotechnology'
+];
 const Connections: React.FC = () => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
@@ -83,6 +118,10 @@ const Connections: React.FC = () => {
     // Navigate to messaging page
     // You can pass state to pre-select this conversation or create a new one
     navigate('/messaging', { state: { userId, userName } });
+  };
+
+  const handleViewProfile = (userId: string) => {
+    navigate(`/profile/${userId}`);
   };
   // Filter connections based on search query and filters
   const filteredConnections = connections.filter((connection: Connection) => {
@@ -159,9 +198,18 @@ const Connections: React.FC = () => {
           <div className="card h-100 border-0 shadow-sm overflow-hidden hover-transform transition-all">
             <div className="card-body p-4">
               <div className="d-flex align-items-center mb-4">
-                <img src={connection.avatar} alt={connection.name} className="rounded-circle object-fit-cover me-3" style={{ width: '64px', height: '64px' }} />
-                <div>
-                  <h3 className="h5 fw-bold mb-1">
+                <div
+                  className="position-relative cursor-pointer"
+                  onClick={() => handleViewProfile(connection.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <img src={connection.avatar} alt={connection.name} className="rounded-circle object-fit-cover me-3" style={{ width: '64px', height: '64px' }} />
+                </div>
+                <div
+                  onClick={() => handleViewProfile(connection.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <h3 className="h5 fw-bold mb-1 hover-primary transition-colors">
                     {connection.name}
                   </h3>
                   <p className="text-muted small mb-1">
@@ -208,7 +256,7 @@ const Connections: React.FC = () => {
                   <button
                     className="btn btn-light rounded-circle p-2 text-success bg-success-subtle border-0"
                     onClick={() => handleAddConnection(connection.id)}
-                    title="View Profile"
+                    title="Connect"
                   >
                     <UserPlusIcon size={18} />
                   </button>

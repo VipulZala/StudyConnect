@@ -305,3 +305,5 @@
     at Server.listen (node:net:2074:7)
     at C:\Users\zalav\OneDrive\Desktop\StudyConnect\backend\src\server.js:223:12
     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-01-05T16:54:00.345Z DB Connected. Starting server listen...
+2026-01-05T16:54:00.357Z Server listening on port 5000

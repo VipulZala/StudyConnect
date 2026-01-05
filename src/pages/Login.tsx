@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import AuthLayout from '../components/AuthLayout';
 import SocialButton from '../components/SocialButton';
-import PhoneOtpModal from '../components/PhoneOtpModal';
 import { apiFetch } from '../lib/api';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,7 +14,6 @@ export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPhone, setShowPhone] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,18 +53,13 @@ export default function Login() {
         <div className="text-center small text-muted">or continue with</div>
 
         <div className="row g-2">
-          <div className="col-12 col-sm-4">
+          <div className="col-12 col-sm-6">
             <SocialButton provider="google" onClick={loginWithGoogle}>Google</SocialButton>
           </div>
-          <div className="col-12 col-sm-4">
+          <div className="col-12 col-sm-6">
             <SocialButton provider="github" onClick={loginWithGithub}>GitHub</SocialButton>
           </div>
-          <div className="col-12 col-sm-4">
-            <SocialButton provider="phone" onClick={() => setShowPhone(true)}>Phone</SocialButton>
-          </div>
         </div>
-
-        {showPhone && <PhoneOtpModal onClose={() => setShowPhone(false)} onLoggedIn={(token) => { localStorage.setItem('sc_token', token); loginWithToken(token).then(() => nav(from, { replace: true })); }} />}
       </div>
     </AuthLayout>
   );

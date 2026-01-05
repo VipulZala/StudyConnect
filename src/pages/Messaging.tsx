@@ -238,12 +238,27 @@ const Messaging: React.FC = () => {
   }, [user]);
 
   // Handle opening a specific user's chat from Connections page
+  // Handle opening a specific user's chat from Connections page or restoring last active chat
   useEffect(() => {
     const state = location.state as { userId?: string; userName?: string } | null;
     if (state?.userId && user) {
       openChatWithUser(state.userId, state.userName || 'User');
+    } else {
+      // Restore last active chat
+      const lastChatId = localStorage.getItem('lastActiveChatId');
+      if (lastChatId && !selectedConversation && conversations.length > 0) {
+        const savedConv = conversations.find(c => c.chatId === lastChatId);
+        if (savedConv) {
+          setSelectedConversation(savedConv);
+          fetchMessages(savedConv.chatId);
+          // Join socket room
+          if (socket && isConnected) {
+            socket.emit('joinChat', savedConv.chatId);
+          }
+        }
+      }
     }
-  }, [location.state, user]);
+  }, [location.state, user, conversations, selectedConversation]);
 
   const openChatWithUser = async (userId: string, userName: string) => {
     try {

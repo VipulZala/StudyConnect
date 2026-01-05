@@ -136,6 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const me = await apiFetch('/users/me', { headers: { Authorization: `Bearer ${token}` } });
       const normalized: User = {
         _id: me._id || me.id,
+        id: me._id || me.id,
         name: me.name,
         email: me.email,
         avatar: me.profile?.avatarUrl || me.avatar || '',

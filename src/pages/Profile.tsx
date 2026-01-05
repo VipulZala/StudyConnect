@@ -48,6 +48,8 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [connectionRequests, setConnectionRequests] = useState<ConnectionRequest[]>([]);
+  const [connections, setConnections] = useState<any[]>([]);
+  const [showConnectionsModal, setShowConnectionsModal] = useState(false);
 
   // Form state for editing
   const [formData, setFormData] = useState({
@@ -72,6 +74,7 @@ export default function Profile() {
     fetchProfile();
     if (isOwnProfile) {
       fetchConnectionRequests();
+      fetchConnections();
     }
   }, [id, currentUser]);
 
@@ -81,6 +84,16 @@ export default function Profile() {
       setConnectionRequests(requests);
     } catch (err) {
       console.error('Failed to fetch connection requests:', err);
+    }
+  };
+
+  const fetchConnections = async () => {
+    try {
+      const data = await apiFetch('/connections');
+      setConnections(data || []);
+    } catch (err) {
+      console.error('Failed to fetch connections:', err);
+      setConnections([]);
     }
   };
 
@@ -439,13 +452,22 @@ export default function Profile() {
                       </button>
                     </>
                   ) : (
-                    <button
-                      className="btn btn-primary d-flex align-items-center gap-2"
-                      onClick={() => setEditMode(true)}
-                    >
-                      <Edit2 size={18} />
-                      Edit Profile
-                    </button>
+                    <>
+                      <button
+                        className="btn btn-primary d-flex align-items-center gap-2"
+                        onClick={() => setEditMode(true)}
+                      >
+                        <Edit2 size={18} />
+                        Edit Profile
+                      </button>
+                      <button
+                        className="btn btn-outline-primary d-flex align-items-center gap-2"
+                        onClick={() => setShowConnectionsModal(true)}
+                      >
+                        <UserIcon size={18} />
+                        Connections ({connections.length})
+                      </button>
+                    </>
                   )
                 ) : (
                   <>
@@ -455,9 +477,62 @@ export default function Profile() {
                 )}
               </div>
             </div>
+
           </div>
         </div>
       </div>
+
+
+      {/* Connections Modal */}
+      {
+        showConnectionsModal && (
+          <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex={-1}>
+            <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">My Connections ({connections.length})</h5>
+                  <button type="button" className="btn-close" onClick={() => setShowConnectionsModal(false)}></button>
+                </div>
+                <div className="modal-body p-0">
+                  {connections.length === 0 ? (
+                    <div className="text-center p-5 text-muted">
+                      <UserIcon size={48} className="mb-3 opacity-50" />
+                      <p>No connections yet.</p>
+                    </div>
+                  ) : (
+                    <div className="list-group list-group-flush">
+                      {connections.map((conn) => (
+                        <div key={conn.connectionId} className="list-group-item d-flex align-items-center justify-content-between p-3">
+                          <div className="d-flex align-items-center gap-3">
+                            <img
+                              src={conn.user.profile?.avatarUrl || conn.user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(conn.user.name)}`}
+                              alt={conn.user.name}
+                              className="rounded-circle object-fit-cover"
+                              width="48"
+                              height="48"
+                            />
+                            <div>
+                              <h6 className="mb-0 fw-semibold">{conn.user.name}</h6>
+                              <small className="text-muted">{conn.user.email}</small>
+                            </div>
+                          </div>
+                          <Link
+                            to={`/profile/${conn.user._id || conn.user.id}`}
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => setShowConnectionsModal(false)}
+                          >
+                            View
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
 
       <div className="row g-4">
         {/* Left Column */}
@@ -671,6 +746,6 @@ export default function Profile() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }
