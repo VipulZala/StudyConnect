@@ -102,3 +102,34 @@ exports.markAsRead = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+exports.deleteMessages = async (req, res) => {
+  try {
+    const { messageIds } = req.body;
+    const userId = req.user.id;
+
+    if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
+      return res.status(400).json({ message: 'messageIds array required' });
+    }
+
+    console.log('Deleting messages:', messageIds, 'for user:', userId);
+
+    // Delete only messages that belong to the user (sender)
+    const result = await Message.deleteMany({
+      _id: { $in: messageIds },
+      sender: userId
+    });
+
+    console.log('Delete result:', result);
+
+    res.json({
+      success: true,
+      deletedCount: result.deletedCount,
+      message: `${result.deletedCount} message(s) deleted successfully`
+    });
+  } catch (err) {
+    console.error('Delete messages error:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+

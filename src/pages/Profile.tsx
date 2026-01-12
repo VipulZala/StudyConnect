@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../lib/api';
 import {
@@ -50,6 +50,8 @@ export default function Profile() {
   const [connectionRequests, setConnectionRequests] = useState<ConnectionRequest[]>([]);
   const [connections, setConnections] = useState<any[]>([]);
   const [showConnectionsModal, setShowConnectionsModal] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const navigate = useNavigate();
 
   // Form state for editing
   const [formData, setFormData] = useState({
@@ -75,6 +77,8 @@ export default function Profile() {
     if (isOwnProfile) {
       fetchConnectionRequests();
       fetchConnections();
+    } else {
+      checkConnectionStatus();
     }
   }, [id, currentUser]);
 
@@ -204,6 +208,10 @@ export default function Profile() {
     }
   };
 
+  const handleRemoveProfilePicture = () => {
+    setFormData(prev => ({ ...prev, avatarUrl: '' }));
+  };
+
   const getImageUrl = (url?: string) => {
     if (!url) return '';
     if (url.startsWith('http') || url.startsWith('data:')) return url;
@@ -266,6 +274,44 @@ export default function Profile() {
       console.error('Failed to reject request:', err);
       alert(err?.message || 'Failed to reject request');
     }
+  };
+
+  const checkConnectionStatus = async () => {
+    if (!id) return;
+    try {
+      const userConnections = await apiFetch('/connections');
+      const connected = userConnections.some((conn: any) =>
+        conn.user._id === id || conn.user.id === id
+      );
+      setIsConnected(connected);
+    } catch (err) {
+      console.error('Failed to check connection status:', err);
+    }
+  };
+
+  const handleSendConnectionRequest = async () => {
+    if (!id) return;
+    try {
+      await apiFetch('/connections/request', {
+        method: 'POST',
+        body: { recipientId: id }
+      });
+      alert('Connection request sent successfully!');
+      checkConnectionStatus();
+    } catch (err: any) {
+      console.error('Failed to send connection request:', err);
+      alert(err?.message || 'Failed to send connection request');
+    }
+  };
+
+  const handleMessageUser = () => {
+    if (!profileData) return;
+    navigate('/messaging', {
+      state: {
+        userId: id || profileData._id || profileData.id,
+        userName: profileData.name
+      }
+    });
   };
 
   if (loading) {
@@ -398,6 +444,18 @@ export default function Profile() {
                   </div>
                 )}
               </div>
+              {/* Remove Picture Button */}
+              {editMode && displayAvatar && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger mt-2 d-flex align-items-center gap-1 mx-auto"
+                  onClick={handleRemoveProfilePicture}
+                  title="Remove profile picture"
+                >
+                  <XCircle size={16} />
+                  Remove Picture
+                </button>
+              )}
             </div>
 
             {/* Profile Info */}
@@ -471,8 +529,20 @@ export default function Profile() {
                   )
                 ) : (
                   <>
-                    <button className="btn btn-primary">Message</button>
-                    <button className="btn btn-outline-primary">Connect</button>
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleMessageUser}
+                    >
+                      Message
+                    </button>
+                    {!isConnected && (
+                      <button
+                        className="btn btn-outline-primary"
+                        onClick={handleSendConnectionRequest}
+                      >
+                        Connect
+                      </button>
+                    )}
                   </>
                 )}
               </div>

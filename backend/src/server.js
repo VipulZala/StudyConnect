@@ -112,6 +112,13 @@ try {
   console.warn('connectionRoutes not loaded:', err && err.message);
 }
 
+try {
+  app.use('/api/v1/projects', require('./routes/projectRoutes')); // project CRUD
+} catch (err) {
+  console.warn('projectRoutes not loaded:', err && err.message);
+}
+
+
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -181,26 +188,90 @@ io.on('connection', (socket) => {
 
   // send message -> persist and broadcast
   socket.on('sendMessage', async (payload) => {
-    // payload: { chatId, content, receivers? }
+    // payload: { chatId, content, messageType, fileUrl, fileName, fileType, fileSize, receivers? }
     try {
-      if (!payload || !payload.chatId || !payload.content) {
-        socket.emit('errorMessage', { message: 'Invalid message payload' });
+      if (!payload || !payload.chatId) {
+        socket.emit('errorMessage', { message: 'Invalid message payload - chatId required' });
         return;
       }
-      const msgDoc = await Message.create({
+
+      // Validate based on message type
+      if (payload.messageType === 'text' && !payload.content) {
+        socket.emit('errorMessage', { message: 'Text message requires content' });
+        return;
+      }
+
+      if ((payload.messageType === 'file' || payload.messageType === 'image') && !payload.fileUrl) {
+        socket.emit('errorMessage', { message: 'File message requires fileUrl' });
+        return;
+      }
+
+      console.log('Creating message:', {
         chatId: payload.chatId,
         sender: socket.userId,
-        content: payload.content,
-        createdAt: new Date()
+        messageType: payload.messageType || 'text',
+        hasFile: !!payload.fileUrl
       });
+
+      // Create message document with file metadata if present
+      const messageData = {
+        chatId: payload.chatId,
+        sender: socket.userId,
+        content: payload.content || '',
+        messageType: payload.messageType || 'text',
+        createdAt: new Date()
+      };
+
+      // Add file metadata if this is a file/image message
+      if (payload.fileUrl) {
+        messageData.fileUrl = payload.fileUrl;
+        messageData.fileName = payload.fileName;
+        messageData.fileType = payload.fileType;
+        messageData.fileSize = payload.fileSize;
+      }
+
+      const msgDoc = await Message.create(messageData);
+
+      // Populate sender info before emitting
+      await msgDoc.populate('sender', 'name email profile.avatarUrl avatarUrl');
+
+      console.log('Message created successfully:', msgDoc._id);
+
       // emit to room
       io.to(payload.chatId).emit('newMessage', msgDoc);
+
       // notify receivers individually if list provided
       if (Array.isArray(payload.receivers)) {
         payload.receivers.forEach(r => io.to(String(r)).emit('notification', { type: 'message', message: 'New message' }));
       }
     } catch (err) {
-      console.error('sendMessage error', err);
+      console.error('sendMessage error:', err);
+      socket.emit('errorMessage', { message: 'Failed to send message: ' + err.message });
+    }
+  });
+
+  // Handle message delivered confirmation
+  socket.on('messageDelivered', async ({ messageId, chatId }) => {
+    try {
+      if (!socket.userId) return;
+
+      // Update message to add user to deliveredTo array
+      const updatedMsg = await Message.findByIdAndUpdate(
+        messageId,
+        { $addToSet: { deliveredTo: socket.userId } },
+        { new: true }
+      );
+
+      if (updatedMsg) {
+        // Notify sender about delivery status
+        io.to(chatId).emit('messageStatusUpdate', {
+          messageId,
+          status: 'delivered',
+          userId: socket.userId
+        });
+      }
+    } catch (err) {
+      console.error('messageDelivered error:', err);
     }
   });
 

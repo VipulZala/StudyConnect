@@ -11,7 +11,9 @@ const MessageSchema = new mongoose.Schema({
   fileType: String,
   fileSize: Number,
   readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  deliveredTo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   createdAt: { type: Date, default: Date.now }
 });
 
 module.exports = mongoose.model('Message', MessageSchema);
+

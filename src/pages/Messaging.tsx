@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { SearchIcon, SendIcon, PaperclipIcon, MoreVerticalIcon, PhoneIcon, VideoIcon, XIcon, FileIcon, DownloadIcon, ArrowLeftIcon } from 'lucide-react';
+import { SearchIcon, SendIcon, PaperclipIcon, XIcon, FileIcon, DownloadIcon, ArrowLeftIcon, Trash2Icon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../hooks/useSocket';
 import { apiFetch } from '../lib/api';
@@ -30,6 +30,7 @@ interface Message {
   fileType?: string;
   fileSize?: number;
   readBy: string[];
+  deliveredTo?: string[]; // Track who received the message
   createdAt: string;
 }
 
@@ -222,6 +223,9 @@ const Messaging: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -314,14 +318,35 @@ const Messaging: React.FC = () => {
         setMessages(prev => [...prev, message]);
         scrollToBottom();
 
-        // Mark as read
-        if (message.sender._id !== user?.id) {
+        // If message is from someone else, mark as delivered and read
+        if (message.sender._id !== user?.id && message.sender._id !== user?._id) {
+          // Emit delivery confirmation
+          socket.emit('messageDelivered', {
+            messageId: message._id,
+            chatId: message.chatId
+          });
+
+          // Mark as read
           markAsRead(selectedConversation.chatId);
         }
       }
 
       // Update conversation list
       fetchConversations();
+    });
+
+    // Listen for delivery status updates
+    socket.on('messageStatusUpdate', ({ messageId, status, userId }) => {
+      setMessages(prev => prev.map(msg => {
+        if (msg._id === messageId) {
+          if (status === 'delivered' && !msg.deliveredTo?.includes(userId)) {
+            return { ...msg, deliveredTo: [...(msg.deliveredTo || []), userId] };
+          } else if (status === 'read' && !msg.readBy?.includes(userId)) {
+            return { ...msg, readBy: [...(msg.readBy || []), userId] };
+          }
+        }
+        return msg;
+      }));
     });
 
     socket.on('typing', ({ userId }: { userId: string }) => {
@@ -334,6 +359,7 @@ const Messaging: React.FC = () => {
     return () => {
       socket.emit('leaveChat', selectedConversation.chatId);
       socket.off('newMessage');
+      socket.off('messageStatusUpdate');
       socket.off('typing');
     };
   }, [socket, selectedConversation, user]);
@@ -393,56 +419,6 @@ const Messaging: React.FC = () => {
     setSelectedConversation(null);
   };
 
-  const handleCall = (video: boolean = false) => {
-    if (!selectedConversation) return;
-
-    const roomId = `call-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const callLink = `${window.location.origin}/study-room?roomID=${roomId}`;
-    const callType = video ? 'Video Call' : 'Voice Call';
-
-    // Send call link as message
-    const callMessage = `📞 Started a ${callType}. Join here: ${callLink}`;
-
-    // We can reuse the handleSendMessage logic by setting state and submitting, 
-    // or refactor handleSendMessage to accept content. 
-    // For simplicity/safety, we'll manually trigger a send here or just update state and call a sender helper.
-    // Let's create a specialized sender helper or just invoke socket/api directly if possible, 
-    // but reusing handleSendMessage logic via state hack is messy.
-    // Better: extract send logic. For now, I'll direct inject into socket/state.
-
-    // Actually, adapting handleSendMessage is complex due to event object dependency.
-    // Let's just set the message and simulate a submit or duplicate the core logic.
-    // Duplicating core logic for safety:
-
-    const newMsg: Message = {
-      _id: 'msg-' + Date.now(),
-      chatId: selectedConversation.chatId,
-      sender: {
-        _id: user?.id || 'me',
-        name: user?.name || 'You',
-        email: user?.email || 'you@example.com',
-        avatarUrl: user?.avatar || 'https://ui-avatars.com/api/?name=You'
-      },
-      content: callMessage,
-      messageType: 'text',
-      readBy: [],
-      createdAt: new Date().toISOString()
-    };
-
-    setMessages(prev => [...prev, newMsg]);
-
-    if (socket && isConnected) {
-      socket.emit('sendMessage', {
-        chatId: selectedConversation.chatId,
-        content: newMsg.content,
-        messageType: 'text'
-      });
-    }
-
-    // Open the room for the caller immediately
-    window.open(callLink, '_blank');
-  };
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -492,63 +468,78 @@ const Messaging: React.FC = () => {
             body: formData,
             isFormData: true
           });
+
+          console.log('File uploaded successfully:', fileData);
         } catch (uploadErr) {
           console.error('File upload failed:', uploadErr);
-          // Continue without file if upload fails
+          alert('Failed to upload file. Please try again.');
+          setUploading(false);
+          return; // Don't send message if file upload fails
         }
         setUploading(false);
       }
 
-      // Determine message type
+      // Determine message type based on uploaded file data or selected file
       let messageType: 'text' | 'file' | 'image' = 'text';
+      let finalFileType = '';
+
       if (fileData) {
-        messageType = fileData.type.startsWith('image/') ? 'image' : 'file';
-      } else if (selectedFile) {
-        if (selectedFile.type.startsWith('image/')) {
-          messageType = 'image';
-        } else if (selectedFile.type === 'application/pdf') {
-          messageType = 'file'; // Treating PDF as file, but will render differently
-        } else {
-          messageType = 'file';
-        }
+        // Use the file type from uploaded data
+        finalFileType = fileData.type || fileData.mimeType || selectedFile?.type || '';
+        messageType = finalFileType.startsWith('image/') ? 'image' : 'file';
+      } else if (selectedFile && !fileData) {
+        // Fallback if upload didn't return data but we have selected file
+        finalFileType = selectedFile.type;
+        messageType = finalFileType.startsWith('image/') ? 'image' : 'file';
       }
 
-      // Create message object
+      // Only set to text if no file is involved
+      if (!fileData && !selectedFile) {
+        messageType = 'text';
+      }
+
+      // Create message object with proper file metadata
       const newMsg: Message = {
         _id: 'msg-' + Date.now(),
         chatId: selectedConversation.chatId,
         sender: {
-          _id: user?.id || 'me',
+          _id: user?.id || user?._id || 'me',
           name: user?.name || 'You',
           email: user?.email || 'you@example.com',
-          avatarUrl: user?.avatar || 'https://ui-avatars.com/api/?name=You'
+          avatarUrl: user?.avatar || user?.profile?.avatarUrl || 'https://ui-avatars.com/api/?name=You'
         },
-        content: newMessage.trim() || (fileData ? fileData.name : selectedFile?.name || ''),
+        content: newMessage.trim() || (fileData?.originalName || fileData?.name || selectedFile?.name || ''),
         messageType,
-        fileUrl: fileData?.url,
-        fileName: fileData?.name || selectedFile?.name,
-        fileType: fileData?.type || selectedFile?.type,
+        fileUrl: fileData?.url || fileData?.path,
+        fileName: fileData?.originalName || fileData?.name || selectedFile?.name,
+        fileType: finalFileType,
         fileSize: fileData?.size || selectedFile?.size,
         readBy: [],
         createdAt: new Date().toISOString()
       };
 
-      // Add message locally immediately
-      setMessages(prev => [...prev, newMsg]);
+      console.log('Sending message:', newMsg);
+
+      // Don't add message locally - wait for socket to broadcast it back
+      // This prevents duplicate messages
 
       // Send via socket if available
       if (socket && isConnected) {
         const messagePayload = {
           chatId: selectedConversation.chatId,
           content: newMsg.content,
-          messageType,
-          fileUrl: fileData?.url,
-          fileName: fileData?.name || selectedFile?.name,
-          fileType: fileData?.type || selectedFile?.type,
-          fileSize: fileData?.size || selectedFile?.size
+          messageType: newMsg.messageType,
+          fileUrl: newMsg.fileUrl,
+          fileName: newMsg.fileName,
+          fileType: newMsg.fileType,
+          fileSize: newMsg.fileSize
         };
 
+        console.log('Emitting message via socket:', messagePayload);
         socket.emit('sendMessage', messagePayload);
+      } else {
+        // If socket not connected, add locally as fallback
+        setMessages(prev => [...prev, newMsg]);
       }
 
       // Update conversation list
@@ -557,7 +548,7 @@ const Messaging: React.FC = () => {
           return {
             ...conv,
             lastMessage: {
-              text: newMsg.content,
+              text: newMsg.fileName || newMsg.content,
               timestamp: newMsg.createdAt,
               read: true
             }
@@ -572,6 +563,7 @@ const Messaging: React.FC = () => {
     } catch (err) {
       console.error('Failed to send message:', err);
       setUploading(false);
+      alert('Failed to send message. Please try again.');
     }
   };
 
@@ -610,16 +602,163 @@ const Messaging: React.FC = () => {
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   };
 
+  const getDateLabel = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    if (messageDate.getTime() === today.getTime()) {
+      return 'Today';
+    } else if (messageDate.getTime() === yesterday.getTime()) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    }
+  };
+
+  const groupMessagesByDate = (messages: Message[]) => {
+    const groups: { [key: string]: Message[] } = {};
+    messages.forEach(message => {
+      const dateLabel = getDateLabel(message.createdAt);
+      if (!groups[dateLabel]) {
+        groups[dateLabel] = [];
+      }
+      groups[dateLabel].push(message);
+    });
+    return groups;
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
+  // Get message status for tick indicators
+  const getMessageStatus = (message: Message): 'sent' | 'delivered' | 'read' => {
+    const currentUserId = user?.id || user?._id;
+
+    // If message is read by anyone other than sender
+    if (message.readBy && message.readBy.length > 0) {
+      const readByOthers = message.readBy.filter(id => id !== currentUserId);
+      if (readByOthers.length > 0) {
+        return 'read';
+      }
+    }
+
+    // If message is delivered to anyone
+    if (message.deliveredTo && message.deliveredTo.length > 0) {
+      return 'delivered';
+    }
+
+    // Default: just sent
+    return 'sent';
+  };
+
+  // Render tick indicator based on message status
+  const renderMessageTicks = (message: Message) => {
+    const status = getMessageStatus(message);
+
+    if (status === 'read') {
+      // Double blue ticks
+      return (
+        <span className="ms-1" style={{ display: 'inline-flex', gap: '1px' }}>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+            <path d="M5.5 8.5L2 5L0.5 6.5L5.5 11.5L15.5 1.5L14 0L5.5 8.5Z" fill="#4A9EFF" />
+            <path d="M10.5 8.5L7 5L5.5 6.5L10.5 11.5L20.5 1.5L19 0L10.5 8.5Z" fill="#4A9EFF" />
+          </svg>
+        </span>
+      );
+    } else if (status === 'delivered') {
+      // Double gray ticks
+      return (
+        <span className="ms-1" style={{ display: 'inline-flex', gap: '1px' }}>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+            <path d="M5.5 8.5L2 5L0.5 6.5L5.5 11.5L15.5 1.5L14 0L5.5 8.5Z" fill="currentColor" opacity="0.5" />
+            <path d="M10.5 8.5L7 5L5.5 6.5L10.5 11.5L20.5 1.5L19 0L10.5 8.5Z" fill="currentColor" opacity="0.5" />
+          </svg>
+        </span>
+      );
+    } else {
+      // Single gray tick
+      return (
+        <span className="ms-1">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M4 7L1 4L0 5L4 9L12 1L11 0L4 7Z" fill="currentColor" opacity="0.5" />
+          </svg>
+        </span>
+      );
+    }
+  };
+
   const filteredConversations = conversations.filter(conversation => {
     if (!searchQuery) return true;
     return conversation.user.name.toLowerCase().includes(searchQuery.toLowerCase());
   });
+
+  const handleToggleDeleteMode = () => {
+    setDeleteMode(!deleteMode);
+    setSelectedMessages(new Set());
+  };
+
+  const handleToggleMessageSelection = (messageId: string) => {
+    const newSelected = new Set(selectedMessages);
+    if (newSelected.has(messageId)) {
+      newSelected.delete(messageId);
+    } else {
+      newSelected.add(messageId);
+    }
+    setSelectedMessages(newSelected);
+  };
+
+  const handleDeleteMessages = () => {
+    if (selectedMessages.size === 0) return;
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteMessages = async () => {
+    setShowDeleteConfirm(false);
+
+    const messageIdsArray = Array.from(selectedMessages);
+    console.log('Attempting to delete messages:', messageIdsArray);
+
+    try {
+      // Try DELETE method first
+      try {
+        const response = await apiFetch('/messages/delete', {
+          method: 'DELETE',
+          body: { messageIds: messageIdsArray }
+        });
+        console.log('Delete response:', response);
+      } catch (deleteErr: any) {
+        console.log('DELETE method failed, trying POST:', deleteErr);
+
+        // Some backends prefer POST for delete operations
+        const response = await apiFetch('/messages/delete', {
+          method: 'POST',
+          body: { messageIds: messageIdsArray }
+        });
+        console.log('Delete response (POST):', response);
+      }
+
+      // Remove deleted messages from local state
+      setMessages(prev => prev.filter(msg => !selectedMessages.has(msg._id)));
+      setSelectedMessages(new Set());
+      setDeleteMode(false);
+
+      // Refresh conversations to update last message
+      fetchConversations();
+
+      console.log('Messages deleted successfully');
+    } catch (err: any) {
+      console.error('Failed to delete messages:', err);
+      console.error('Error details:', err.message, err.response);
+      alert(`Failed to delete messages: ${err.message || 'Unknown error'}. Please try again.`);
+    }
+  };
 
   const renderMessageContent = (message: Message) => {
     const baseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:5000';
@@ -676,7 +815,7 @@ const Messaging: React.FC = () => {
         <div>
           <p className="mb-2">{text}</p>
           <a href={link} target="_blank" rel="noopener noreferrer" className="btn btn-success btn-sm d-inline-flex align-items-center gap-2">
-            <VideoIcon size={16} /> Join Call
+            📞 Join Call
           </a>
         </div>
       );
@@ -787,126 +926,173 @@ const Messaging: React.FC = () => {
                     </div>
                   </div>
                   <div className="d-flex gap-2">
-                    <button onClick={() => handleCall(false)} className="btn btn-light rounded-circle p-2 text-muted" title="Voice Call">
-                      <PhoneIcon size={20} />
-                    </button>
-                    <button onClick={() => handleCall(true)} className="btn btn-light rounded-circle p-2 text-muted" title="Video Call">
-                      <VideoIcon size={20} />
-                    </button>
-                    <button className="btn btn-light rounded-circle p-2 text-muted">
-                      <MoreVerticalIcon size={20} />
-                    </button>
+                    {deleteMode ? (
+                      <>
+                        <button
+                          onClick={handleDeleteMessages}
+                          className="btn btn-danger btn-sm d-flex align-items-center gap-1"
+                          disabled={selectedMessages.size === 0}
+                          title="Delete Selected Messages"
+                        >
+                          <Trash2Icon size={16} />
+                          Delete ({selectedMessages.size})
+                        </button>
+                        <button
+                          onClick={handleToggleDeleteMode}
+                          className="btn btn-light btn-sm"
+                          title="Cancel"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleToggleDeleteMode}
+                        className="btn btn-light rounded-circle p-2 text-muted"
+                        title="Delete Messages"
+                      >
+                        <Trash2Icon size={20} />
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 {/* Messages */}
                 <div className="flex-grow-1 overflow-auto p-4 bg-body-tertiary" style={{ minHeight: 0 }}>
                   <div className="d-flex flex-column gap-3">
-                    {messages.map(message => {
-                      const isOwn = message.sender._id === user?.id;
-                      const avatar = message.sender.profile?.avatarUrl || message.sender.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(message.sender.name)}`;
-
-                      return (
-                        <div key={message._id} className={`d-flex ${isOwn ? 'justify-content-end' : 'justify-content-start'}`}>
-                          {!isOwn && (
-                            <img
-                              src={avatar}
-                              alt={message.sender.name}
-                              className="rounded-circle object-fit-cover me-2 align-self-end"
-                              style={{ width: '32px', height: '32px' }}
-                            />
-                          )}
-                          <div
-                            className={`p-3 rounded-3 ${isOwn ? 'bg-primary text-white rounded-bottom-end-0' : 'bg-body-secondary text-body rounded-bottom-start-0 shadow-sm'}`}
-                            style={{ maxWidth: '75%' }}
-                          >
-                            {renderMessageContent(message)}
-                            <p className={`small mb-0 text-end mt-1 ${isOwn ? 'text-white-50' : 'text-muted'}`} style={{ fontSize: '0.75rem' }}>
-                              {formatMessageTime(message.createdAt)}
-                            </p>
+                    {Object.entries(groupMessagesByDate(messages)).map(([dateLabel, dateMessages]) => (
+                      <div key={dateLabel}>
+                        {/* Date Separator */}
+                        <div className="d-flex align-items-center justify-content-center my-3">
+                          <div className="bg-body-secondary text-muted px-3 py-1 rounded-pill small fw-medium">
+                            {dateLabel}
                           </div>
                         </div>
-                      );
-                    })}
+
+                        {/* Messages for this date */}
+                        {dateMessages.map(message => {
+                          const isOwn = message.sender._id === user?.id;
+                          const avatar = message.sender.profile?.avatarUrl || message.sender.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(message.sender.name)}`;
+                          const isSelected = selectedMessages.has(message._id);
+
+                          return (
+                            <div key={message._id} className={`d-flex ${isOwn ? 'justify-content-end' : 'justify-content-start'} align-items-start gap-2`}>
+                              {deleteMode && (
+                                <div className="d-flex align-items-center" style={{ paddingTop: '8px' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => handleToggleMessageSelection(message._id)}
+                                    className="form-check-input"
+                                    style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+                                  />
+                                </div>
+                              )}
+                              {!isOwn && (
+                                <img
+                                  src={avatar}
+                                  alt={message.sender.name}
+                                  className="rounded-circle object-fit-cover align-self-end"
+                                  style={{ width: '32px', height: '32px' }}
+                                />
+                              )}
+                              <div
+                                className={`p-3 rounded-3 ${isOwn ? 'bg-primary text-white rounded-bottom-end-0' : 'bg-body-secondary text-body rounded-bottom-start-0 shadow-sm'}`}
+                                style={{ maxWidth: '75%' }}
+                              >
+                                {renderMessageContent(message)}
+                                <p className={`small mb-0 text-end mt-1 d-flex align-items-center justify-content-end ${isOwn ? 'text-white-50' : 'text-muted'}`} style={{ fontSize: '0.75rem' }}>
+                                  {formatMessageTime(message.createdAt)}
+                                  {isOwn && renderMessageTicks(message)}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
                     <div ref={messagesEndRef} />
                   </div>
                 </div>
 
                 {/* Message Input */}
-                <div className="p-3 border-top bg-body" style={{ minHeight: '80px' }}>
-                  {selectedFile && (
-                    <div className="mb-2 p-2 bg-body rounded d-flex align-items-center gap-2 border shadow-sm">
-                      {filePreview || (selectedFile.type && selectedFile.type.startsWith('image/')) ? (
-                        <img src={filePreview || ''} alt="Preview" className="rounded" style={{ width: '40px', height: '40px', objectFit: 'cover' }} />
-                      ) : (
-                        <div className="p-2 bg-primary-subtle rounded">
-                          <FileIcon size={24} className="text-primary" />
+                <div className="p-3 border-top bg-body">
+                  <form onSubmit={handleSendMessage} className="d-flex flex-column gap-2">
+                    {selectedFile && (
+                      <div className="p-2 bg-body rounded d-flex align-items-center gap-2 border shadow-sm">
+                        {filePreview || (selectedFile.type && selectedFile.type.startsWith('image/')) ? (
+                          <img src={filePreview || ''} alt="Preview" className="rounded" style={{ width: '40px', height: '40px', objectFit: 'cover' }} />
+                        ) : (
+                          <div className="p-2 bg-primary-subtle rounded">
+                            <FileIcon size={24} className="text-primary" />
+                          </div>
+                        )}
+                        <div className="flex-grow-1 min-w-0 mx-2">
+                          <p className="mb-0 small fw-medium text-truncate">{selectedFile.name}</p>
+                          <p className="mb-0 text-muted" style={{ fontSize: '0.7rem' }}>
+                            {formatFileSize(selectedFile.size)}
+                          </p>
                         </div>
-                      )}
-                      <div className="flex-grow-1 min-w-0 mx-2">
-                        <p className="mb-0 small fw-medium text-truncate">{selectedFile.name}</p>
-                        <p className="mb-0 text-muted" style={{ fontSize: '0.7rem' }}>
-                          {formatFileSize(selectedFile.size)}
-                        </p>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-light rounded-circle p-1 hover-bg-light-dark"
+                          onClick={handleRemoveFile}
+                          title="Remove file"
+                        >
+                          <XIcon size={14} />
+                        </button>
                       </div>
+                    )}
+
+                    <div className="d-flex align-items-end gap-2">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileSelect}
+                        className="d-none"
+                        accept="image/*,.pdf,.doc,.docx,.txt,.zip,.rar"
+                      />
                       <button
                         type="button"
-                        className="btn btn-sm btn-light rounded-circle p-1 hover-bg-light-dark"
-                        onClick={handleRemoveFile}
-                        title="Remove file"
+                        className="btn btn-light rounded-circle p-2 text-muted flex-shrink-0"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
                       >
-                        <XIcon size={14} />
+                        <PaperclipIcon size={20} />
+                      </button>
+                      <div className="flex-grow-1">
+                        <textarea
+                          value={newMessage}
+                          onChange={e => {
+                            setNewMessage(e.target.value);
+                            handleTyping();
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSendMessage(e);
+                            }
+                          }}
+                          placeholder="Type a message... (Shift+Enter for new line)"
+                          className="form-control"
+                          rows={2}
+                          style={{ resize: 'none', minHeight: '50px', maxHeight: '120px' }}
+                          disabled={uploading}
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="btn btn-primary rounded-circle p-2 d-flex align-items-center justify-content-center flex-shrink-0"
+                        style={{ width: '44px', height: '44px' }}
+                        disabled={uploading || (!newMessage.trim() && !selectedFile)}
+                      >
+                        {uploading ? (
+                          <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        ) : (
+                          <SendIcon size={20} />
+                        )}
                       </button>
                     </div>
-                  )}
-
-                  <form onSubmit={handleSendMessage} className="d-flex align-items-end gap-2">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileSelect}
-                      className="d-none"
-                      accept="image/*,.pdf,.doc,.docx,.txt,.zip,.rar"
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-light rounded-circle p-2 text-muted"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
-                    >
-                      <PaperclipIcon size={20} />
-                    </button>
-                    <div className="flex-grow-1">
-                      <textarea
-                        value={newMessage}
-                        onChange={e => {
-                          setNewMessage(e.target.value);
-                          handleTyping();
-                        }}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSendMessage(e);
-                          }
-                        }}
-                        placeholder="Type a message... (Shift+Enter for new line)"
-                        className="form-control"
-                        rows={2}
-                        style={{ resize: 'none', minHeight: '50px', maxHeight: '120px' }}
-                        disabled={uploading}
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="btn btn-primary rounded-circle p-2 d-flex align-items-center justify-content-center"
-                      disabled={uploading || (!newMessage.trim() && !selectedFile)}
-                    >
-                      {uploading ? (
-                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                      ) : (
-                        <SendIcon size={20} />
-                      )}
-                    </button>
                   </form>
                 </div>
               </>
@@ -930,6 +1116,48 @@ const Messaging: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <>
+          <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header border-0">
+                  <h5 className="modal-title fw-bold">Delete Messages</h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setShowDeleteConfirm(false)}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  <p className="mb-0">
+                    Are you sure you want to delete {selectedMessages.size} message{selectedMessages.size > 1 ? 's' : ''}?
+                    This action cannot be undone.
+                  </p>
+                </div>
+                <div className="modal-footer border-0">
+                  <button
+                    type="button"
+                    className="btn btn-light"
+                    onClick={() => setShowDeleteConfirm(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={confirmDeleteMessages}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

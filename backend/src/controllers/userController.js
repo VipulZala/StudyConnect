@@ -2,8 +2,8 @@ const User = require('../models/User');
 
 exports.getAllUsers = async (req, res) => {
   try {
-    // Return all users, selecting only necessary fields
-    const users = await User.find({}, 'name email phone role createdAt avatarUrl');
+    // Return all users with profile data, excluding only password
+    const users = await User.find({}).select('-password');
     res.json(users);
   } catch (err) {
     console.error('getAllUsers err', err);
