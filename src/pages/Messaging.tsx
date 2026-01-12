@@ -686,8 +686,8 @@ const Messaging: React.FC = () => {
   };
 
   return (
-    <div className="w-100" style={{ minHeight: 'calc(100vh - 60px)' }}>
-      <div className="container-fluid p-0" style={{ height: 'calc(100vh - 60px)' }}>
+    <div className="w-100" style={{ height: 'calc(100vh - 72px)', overflow: 'hidden' }}>
+      <div className="container-fluid p-0" style={{ height: '100%' }}>
         <div className="row g-0 h-100">
           {/* Conversation List */}
           <div className={`col-12 col-md-6 col-lg-5 col-xl-4 bg-body border-end d-flex flex-column h-100 ${selectedConversation ? 'd-none d-md-flex' : 'd-flex'}`}>
@@ -707,7 +707,7 @@ const Messaging: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex-grow-1">
+            <div className="flex-grow-1 overflow-auto">
               {filteredConversations.length === 0 ? (
                 <div className="text-center p-4 text-muted">
                   <p>No conversations yet</p>
@@ -757,7 +757,7 @@ const Messaging: React.FC = () => {
           </div>
 
           {/* Conversation View */}
-          <div id="chat-column" className={`col-12 col-md-6 col-lg-7 col-xl-8 d-flex flex-column h-100 ${!selectedConversation ? 'd-none d-md-flex' : 'd-flex'}`}>
+          <div id="chat-column" className={`col-12 col-md-6 col-lg-7 col-xl-8 d-flex flex-column h-100 ${!selectedConversation ? 'd-none d-md-flex' : 'd-flex'}`} style={{ overflow: 'hidden' }}>
             {selectedConversation ? (
               <>
                 {/* Conversation Header */}
@@ -800,7 +800,7 @@ const Messaging: React.FC = () => {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-grow-1 overflow-auto p-4 bg-body-tertiary" style={{ maxHeight: 'calc(100vh - 240px)' }}>
+                <div className="flex-grow-1 overflow-auto p-4 bg-body-tertiary" style={{ minHeight: 0 }}>
                   <div className="d-flex flex-column gap-3">
                     {messages.map(message => {
                       const isOwn = message.sender._id === user?.id;
@@ -835,13 +835,15 @@ const Messaging: React.FC = () => {
                 {/* Message Input */}
                 <div className="p-3 border-top bg-body" style={{ minHeight: '80px' }}>
                   {selectedFile && (
-                    <div className="mb-2 p-2 bg-body-secondary rounded d-flex align-items-center gap-2">
-                      {filePreview ? (
-                        <img src={filePreview} alt="Preview" className="rounded" style={{ width: '50px', height: '50px', objectFit: 'cover' }} />
+                    <div className="mb-2 p-2 bg-body rounded d-flex align-items-center gap-2 border shadow-sm">
+                      {filePreview || (selectedFile.type && selectedFile.type.startsWith('image/')) ? (
+                        <img src={filePreview || ''} alt="Preview" className="rounded" style={{ width: '40px', height: '40px', objectFit: 'cover' }} />
                       ) : (
-                        <FileIcon size={50} className="text-muted" />
+                        <div className="p-2 bg-primary-subtle rounded">
+                          <FileIcon size={24} className="text-primary" />
+                        </div>
                       )}
-                      <div className="flex-grow-1 min-w-0">
+                      <div className="flex-grow-1 min-w-0 mx-2">
                         <p className="mb-0 small fw-medium text-truncate">{selectedFile.name}</p>
                         <p className="mb-0 text-muted" style={{ fontSize: '0.7rem' }}>
                           {formatFileSize(selectedFile.size)}
@@ -849,10 +851,11 @@ const Messaging: React.FC = () => {
                       </div>
                       <button
                         type="button"
-                        className="btn btn-sm btn-light rounded-circle p-1"
+                        className="btn btn-sm btn-light rounded-circle p-1 hover-bg-light-dark"
                         onClick={handleRemoveFile}
+                        title="Remove file"
                       >
-                        <XIcon size={16} />
+                        <XIcon size={14} />
                       </button>
                     </div>
                   )}
