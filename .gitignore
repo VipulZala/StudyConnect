@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 .env
 backend/.env
+
+# Custom ignores
+backend/server_debug_out.txt
+backend/uploads/

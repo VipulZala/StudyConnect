@@ -3,7 +3,80 @@ import { useLocation } from 'react-router-dom';
 import { SearchIcon, SendIcon, PaperclipIcon, XIcon, FileIcon, DownloadIcon, ArrowLeftIcon, Trash2Icon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../hooks/useSocket';
+
 import { apiFetch } from '../lib/api';
+
+// Helper to construct full image URL
+const getImageUrl = (url?: string) => {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('data:')) return url;
+
+  // Construct full URL for uploaded files
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+  try {
+    const origin = new URL(apiUrl).origin;
+    if (url.startsWith('/')) return `${origin}${url}`;
+    return `${origin}/${url}`;
+  } catch (e) {
+    return url;
+  }
+};
+
+// Internal Avatar Component
+const UserAvatar = ({ name, src, size = 48, online, className }: { name: string, src?: string, size?: number, online?: boolean, className?: string }) => {
+  const [error, setError] = React.useState(false);
+
+  // Reset error when src changes
+  React.useEffect(() => {
+    setError(false);
+  }, [src]);
+
+  const initials = name
+    .split(' ')
+    .map(n => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  // Generate a consistent background color based on name
+  const colors = ['#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545', '#fd7e14', '#198754', '#20c997', '#0dcaf0'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const color = colors[Math.abs(hash) % colors.length];
+
+  return (
+    <div className={`position-relative flex-shrink-0 ${className || ''}`} style={{ width: size, height: size }}>
+      {!error && src && src !== 'undefined' && src !== 'null' ? (
+        <img
+          src={getImageUrl(src)}
+          alt={name}
+          className="rounded-circle w-100 h-100 object-fit-cover"
+          onError={() => setError(true)}
+        />
+      ) : (
+        <div
+          className="rounded-circle w-100 h-100 d-flex align-items-center justify-content-center text-white fw-medium"
+          style={{ backgroundColor: color, fontSize: size * 0.4 }}
+        >
+          {initials}
+        </div>
+      )}
+      {online !== undefined && online && (
+        <span
+          className="position-absolute bg-success rounded-circle border border-white"
+          style={{
+            width: Math.max(10, size * 0.25),
+            height: Math.max(10, size * 0.25),
+            bottom: 0,
+            right: 0
+          }}
+        ></span>
+      )}
+    </div>
+  );
+};
 
 interface User {
   id: string;
@@ -859,16 +932,13 @@ const Messaging: React.FC = () => {
                     onClick={() => handleSelectConversation(conversation)}
                   >
                     <div className="d-flex align-items-center">
-                      <div className="position-relative me-3">
-                        <img
-                          src={conversation.user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(conversation.user.name)}`}
-                          alt={conversation.user.name}
-                          className="rounded-circle object-fit-cover"
-                          style={{ width: '48px', height: '48px' }}
+                      <div className="me-3">
+                        <UserAvatar
+                          name={conversation.user.name}
+                          src={conversation.user.avatar}
+                          size={48}
+                          online={conversation.user.online}
                         />
-                        {conversation.user.online && (
-                          <span className="position-absolute bottom-0 end-0 bg-success rounded-circle border border-white" style={{ width: '12px', height: '12px' }}></span>
-                        )}
                       </div>
                       <div className="flex-grow-1 min-w-0">
                         <div className="d-flex justify-content-between align-items-baseline">
@@ -905,16 +975,13 @@ const Messaging: React.FC = () => {
                     <button className="btn btn-link link-dark p-0 me-3 d-md-none" onClick={handleBackToConversations}>
                       <ArrowLeftIcon size={24} />
                     </button>
-                    <div className="position-relative me-3">
-                      <img
-                        src={selectedConversation.user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedConversation.user.name)}`}
-                        alt={selectedConversation.user.name}
-                        className="rounded-circle object-fit-cover"
-                        style={{ width: '40px', height: '40px' }}
+                    <div className="me-3">
+                      <UserAvatar
+                        name={selectedConversation.user.name}
+                        src={selectedConversation.user.avatar}
+                        size={40}
+                        online={selectedConversation.user.online}
                       />
-                      {selectedConversation.user.online && (
-                        <span className="position-absolute bottom-0 end-0 bg-success rounded-circle border border-white" style={{ width: '10px', height: '10px' }}></span>
-                      )}
                     </div>
                     <div>
                       <h2 className="h6 fw-medium mb-0">
@@ -989,11 +1056,11 @@ const Messaging: React.FC = () => {
                                 </div>
                               )}
                               {!isOwn && (
-                                <img
+                                <UserAvatar
+                                  name={message.sender.name}
                                   src={avatar}
-                                  alt={message.sender.name}
-                                  className="rounded-circle object-fit-cover align-self-end"
-                                  style={{ width: '32px', height: '32px' }}
+                                  size={32}
+                                  className="align-self-end"
                                 />
                               )}
                               <div

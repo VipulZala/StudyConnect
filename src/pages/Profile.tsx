@@ -253,25 +253,37 @@ export default function Profile() {
   };
 
   const handleAcceptRequest = async (connectionId: string) => {
+    // Optimistic update
+    setConnectionRequests((prev) => prev.filter((req) => req._id !== connectionId));
+
     try {
       await apiFetch(`/connections/accept/${connectionId}`, { method: 'PUT' });
-      // Refresh connection requests
+      // Refresh connections to update count/list
+      fetchConnections();
+      // Ensure consistency
       fetchConnectionRequests();
       alert('Connection request accepted!');
     } catch (err: any) {
       console.error('Failed to accept request:', err);
+      // Revert if failed (by refetching)
+      fetchConnectionRequests();
       alert(err?.message || 'Failed to accept request');
     }
   };
 
   const handleRejectRequest = async (connectionId: string) => {
+    // Optimistic update
+    setConnectionRequests((prev) => prev.filter((req) => req._id !== connectionId));
+
     try {
       await apiFetch(`/connections/reject/${connectionId}`, { method: 'PUT' });
-      // Refresh connection requests
+      // Ensure consistency
       fetchConnectionRequests();
       alert('Connection request rejected');
     } catch (err: any) {
       console.error('Failed to reject request:', err);
+      // Revert if failed
+      fetchConnectionRequests();
       alert(err?.message || 'Failed to reject request');
     }
   };
@@ -364,40 +376,42 @@ export default function Profile() {
             Connection Requests ({connectionRequests.length})
           </h5>
           <div className="d-flex flex-column gap-3">
-            {connectionRequests.map((request) => (
-              <div key={request._id} className="d-flex align-items-center justify-content-between bg-white rounded p-3">
-                <div className="d-flex align-items-center gap-3">
-                  <img
-                    src={request.requester.profile?.avatarUrl || request.requester.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(request.requester.name)}`}
-                    alt={request.requester.name}
-                    className="rounded-circle"
-                    width="48"
-                    height="48"
-                    style={{ objectFit: 'cover' }}
-                  />
-                  <div>
-                    <h6 className="mb-0">{request.requester.name}</h6>
-                    <small className="text-muted">{request.requester.email}</small>
+            {connectionRequests
+              .filter(request => request.requester && request.requester._id)
+              .map((request) => (
+                <div key={request._id} className="d-flex align-items-center justify-content-between bg-white rounded p-3">
+                  <div className="d-flex align-items-center gap-3">
+                    <img
+                      src={request.requester.profile?.avatarUrl || request.requester.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(request.requester.name)}`}
+                      alt={request.requester.name}
+                      className="rounded-circle"
+                      width="48"
+                      height="48"
+                      style={{ objectFit: 'cover' }}
+                    />
+                    <div>
+                      <h6 className="mb-0">{request.requester.name}</h6>
+                      <small className="text-muted">{request.requester.email}</small>
+                    </div>
+                  </div>
+                  <div className="d-flex gap-2">
+                    <button
+                      className="btn btn-success btn-sm d-flex align-items-center gap-1"
+                      onClick={() => handleAcceptRequest(request._id)}
+                    >
+                      <Check size={16} />
+                      Accept
+                    </button>
+                    <button
+                      className="btn btn-outline-danger btn-sm d-flex align-items-center gap-1"
+                      onClick={() => handleRejectRequest(request._id)}
+                    >
+                      <XCircle size={16} />
+                      Reject
+                    </button>
                   </div>
                 </div>
-                <div className="d-flex gap-2">
-                  <button
-                    className="btn btn-success btn-sm d-flex align-items-center gap-1"
-                    onClick={() => handleAcceptRequest(request._id)}
-                  >
-                    <Check size={16} />
-                    Accept
-                  </button>
-                  <button
-                    className="btn btn-outline-danger btn-sm d-flex align-items-center gap-1"
-                    onClick={() => handleRejectRequest(request._id)}
-                  >
-                    <XCircle size={16} />
-                    Reject
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       )}

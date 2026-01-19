@@ -1,5 +1,13 @@
 // src/config/db.js
 const mongoose = require('mongoose');
+const dns = require('dns');
+
+// Force DNS to use Google Public DNS to avoid queryTxt ETIMEOUT issues with some routers
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+} catch (err) {
+  console.warn('Failed to set custom DNS servers:', err.message);
+}
 
 async function connectDB() {
   const uri = process.env.MONGO_URI;
