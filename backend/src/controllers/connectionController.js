@@ -185,3 +185,33 @@ exports.getConnectionStatus = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
+// Remove a connection
+exports.removeConnection = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { connectionId } = req.params;
+
+        // Find the connection and verify user is part of it
+        const connection = await Connection.findOne({
+            _id: connectionId,
+            $or: [
+                { requester: userId },
+                { recipient: userId }
+            ],
+            status: 'accepted'
+        });
+
+        if (!connection) {
+            return res.status(404).json({ message: 'Connection not found' });
+        }
+
+        // Delete the connection
+        await Connection.findByIdAndDelete(connectionId);
+
+        res.json({ message: 'Connection removed successfully' });
+    } catch (err) {
+        console.error('removeConnection error:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};

@@ -50,6 +50,8 @@ export default function Profile() {
   const [connectionRequests, setConnectionRequests] = useState<ConnectionRequest[]>([]);
   const [connections, setConnections] = useState<any[]>([]);
   const [showConnectionsModal, setShowConnectionsModal] = useState(false);
+  const [showRemoveConfirmModal, setShowRemoveConfirmModal] = useState(false);
+  const [connectionToRemove, setConnectionToRemove] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const navigate = useNavigate();
 
@@ -85,9 +87,14 @@ export default function Profile() {
   const fetchConnectionRequests = async () => {
     try {
       const requests = await apiFetch('/connections/requests');
-      setConnectionRequests(requests);
+      // Filter out any invalid requests (where requester data is missing)
+      const validRequests = (requests || []).filter(
+        (req: ConnectionRequest) => req.requester && req.requester._id
+      );
+      setConnectionRequests(validRequests);
     } catch (err) {
       console.error('Failed to fetch connection requests:', err);
+      setConnectionRequests([]);
     }
   };
 
@@ -326,6 +333,39 @@ export default function Profile() {
     });
   };
 
+  const handleRemoveConnection = (connectionId: string) => {
+    setConnectionToRemove(connectionId);
+    setShowRemoveConfirmModal(true);
+  };
+
+  const confirmRemoveConnection = async () => {
+    if (!connectionToRemove) return;
+
+    // Close modal
+    setShowRemoveConfirmModal(false);
+
+    // Optimistic update
+    setConnections((prev) => prev.filter((conn) => conn.connectionId !== connectionToRemove));
+
+    try {
+      await apiFetch(`/connections/${connectionToRemove}`, { method: 'DELETE' });
+      // Refresh connections to ensure consistency
+      fetchConnections();
+    } catch (err: any) {
+      console.error('Failed to remove connection:', err);
+      // Revert if failed
+      fetchConnections();
+      alert(err?.message || 'Failed to remove connection');
+    } finally {
+      setConnectionToRemove(null);
+    }
+  };
+
+  const cancelRemoveConnection = () => {
+    setShowRemoveConfirmModal(false);
+    setConnectionToRemove(null);
+  };
+
   if (loading) {
     return (
       <div className="d-flex vh-100 align-items-center justify-content-center">
@@ -369,16 +409,16 @@ export default function Profile() {
       )}
 
       {/* Connection Requests Section - Only show on own profile */}
-      {isOwnProfile && connectionRequests.length > 0 && (
-        <div className="alert alert-info border-0 shadow-sm mb-4">
-          <h5 className="alert-heading mb-3">
-            <UserIcon size={20} className="me-2" />
-            Connection Requests ({connectionRequests.length})
-          </h5>
-          <div className="d-flex flex-column gap-3">
-            {connectionRequests
-              .filter(request => request.requester && request.requester._id)
-              .map((request) => (
+      {isOwnProfile && (() => {
+        const validRequests = connectionRequests.filter(request => request.requester && request.requester._id);
+        return validRequests.length > 0 && (
+          <div className="alert alert-info border-0 shadow-sm mb-4">
+            <h5 className="alert-heading mb-3">
+              <UserIcon size={20} className="me-2" />
+              Connection Requests ({validRequests.length})
+            </h5>
+            <div className="d-flex flex-column gap-3">
+              {validRequests.map((request) => (
                 <div key={request._id} className="d-flex align-items-center justify-content-between bg-white rounded p-3">
                   <div className="d-flex align-items-center gap-3">
                     <img
@@ -412,9 +452,10 @@ export default function Profile() {
                   </div>
                 </div>
               ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Header Section */}
       <div className="card mb-4 border-0 shadow-sm">
@@ -600,13 +641,21 @@ export default function Profile() {
                               <small className="text-muted">{conn.user.email}</small>
                             </div>
                           </div>
-                          <Link
-                            to={`/profile/${conn.user._id || conn.user.id}`}
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={() => setShowConnectionsModal(false)}
-                          >
-                            View
-                          </Link>
+                          <div className="d-flex gap-2">
+                            <Link
+                              to={`/profile/${conn.user._id || conn.user.id}`}
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() => setShowConnectionsModal(false)}
+                            >
+                              View
+                            </Link>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => handleRemoveConnection(conn.connectionId)}
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -617,6 +666,31 @@ export default function Profile() {
           </div>
         )
       }
+
+      {/* Remove Connection Confirmation Modal */}
+      {showRemoveConfirmModal && (
+        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex={-1}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header border-0">
+                <h5 className="modal-title">Remove Connection</h5>
+                <button type="button" className="btn-close" onClick={cancelRemoveConnection}></button>
+              </div>
+              <div className="modal-body">
+                <p className="mb-0">Are you sure you want to remove this connection?</p>
+              </div>
+              <div className="modal-footer border-0">
+                <button type="button" className="btn btn-secondary" onClick={cancelRemoveConnection}>
+                  Cancel
+                </button>
+                <button type="button" className="btn btn-danger" onClick={confirmRemoveConnection}>
+                  Remove
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="row g-4">
         {/* Left Column */}
