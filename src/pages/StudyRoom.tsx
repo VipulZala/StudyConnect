@@ -99,8 +99,10 @@ const StudyRoom: React.FC = () => {
           startWithVideoMuted: true,
           // Disable prejoin for faster loading
           prejoinPageEnabled: false,
-          // Enable authentication
-          enableUserRolesBasedOnToken: true,
+          // Disable authentication requirement - allows anyone to join
+          enableUserRolesBasedOnToken: false,
+          // Disable lobby by default
+          enableLobbyChat: false,
         },
         interfaceConfigOverwrite: {
           TOOLBAR_BUTTONS: [
@@ -333,16 +335,16 @@ const StudyRoom: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                <div className={`alert ${isCreator ? 'alert-success' : 'alert-info'} mb-0 py-2 small text-justify`}>
+                <div className={`alert alert-secondary mb-0 py-2 small text-justify`}>
                   {isCreator ? (
                     <>
-                      <strong>✅ You're the Moderator!</strong> As the room creator, you have full control. Share the link above with others to invite them.
+                      <strong>You're the Moderator!</strong> As the room creator, you have full control. Share the link above with others to invite them.
                       <br />
                       <small className="opacity-75">💡 Click "Open in Browser" to get the full-screen experience and moderator controls.</small>
                     </>
                   ) : (
                     <>
-                      <strong>👋 You're a Participant!</strong> Welcome to the study room.
+                      <strong>You're a Participant!</strong> Welcome to the study room.
                       <br />
                       <small className="opacity-75">💡 Click "Open in Browser" for a better full-screen video experience.</small>
                     </>
