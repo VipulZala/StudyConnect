@@ -8,7 +8,7 @@ const RefreshToken = require('../models/RefreshToken');
 
 // helper to issue access & refresh (same as authController)
 function issueTokensAndRedirect(res, user) {
-  const access = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.ACCESS_EXPIRES || '15m' });
+  const access = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.ACCESS_EXPIRES || '7d' });
   const rawRefresh = genToken(64);
   const rt = new RefreshToken({
     user: user._id,
@@ -16,16 +16,10 @@ function issueTokensAndRedirect(res, user) {
     expiresAt: new Date(Date.now() + (Number(process.env.REFRESH_EXPIRES_DAYS || 30) * 24 * 3600 * 1000))
   });
   rt.save().catch(console.error);
-  // set refresh cookie
-  res.cookie('refreshToken', rawRefresh, {
-    httpOnly: true,
-    secure: (process.env.COOKIE_SECURE === 'true'),
-    sameSite: 'lax',
-    path: '/api/v1/auth/refresh'
-  });
-  // Redirect to frontend success page (frontend will call /auth/refresh to obtain access)
-  const redirectTo = (process.env.FRONTEND_URL || 'http://localhost:5173') + '/auth/success';
-  // Optionally include a short-lived access token in URL hash (not recommended). We'll use refresh cookie + refresh endpoint.
+
+  // Cross-domain fix: pass access token in URL query param
+  // (httpOnly cookies don't work cross-domain between Render and Vercel)
+  const redirectTo = (process.env.FRONTEND_URL || 'http://localhost:5173') + '/auth/success?token=' + encodeURIComponent(access);
   res.redirect(redirectTo);
 }
 
