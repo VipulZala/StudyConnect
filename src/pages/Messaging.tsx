@@ -118,168 +118,7 @@ interface Conversation {
   unreadCount: number;
 }
 
-// Dummy data for testing
-const DUMMY_CONVERSATIONS: Conversation[] = [
-  {
-    chatId: 'chat-1',
-    user: {
-      id: '1',
-      name: 'Vivek Pathak',
-      email: 'vivek@example.com',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-      online: true
-    },
-    lastMessage: {
-      text: 'Hey, have you started working on the project yet?',
-      timestamp: new Date().toISOString(),
-      read: true
-    },
-    unreadCount: 0
-  },
-  {
-    chatId: 'chat-2',
-    user: {
-      id: '2',
-      name: 'Nisha Sharma',
-      email: 'nisha@example.com',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-      online: true
-    },
-    lastMessage: {
-      text: 'I found some great resources for our research paper!',
-      timestamp: new Date(Date.now() - 3600000).toISOString(),
-      read: false
-    },
-    unreadCount: 3
-  },
-  {
-    chatId: 'chat-3',
-    user: {
-      id: '3',
-      name: 'Marcus Rodriguez',
-      email: 'marcus@example.com',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-      online: false
-    },
-    lastMessage: {
-      text: 'Can we schedule a study session for tomorrow?',
-      timestamp: new Date(Date.now() - 86400000).toISOString(),
-      read: true
-    },
-    unreadCount: 0
-  },
-  {
-    chatId: 'chat-4',
-    user: {
-      id: '4',
-      name: 'Priya Patel',
-      email: 'priya@example.com',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-      online: true
-    },
-    lastMessage: {
-      text: 'Thanks for helping with the calculus problem!',
-      timestamp: new Date(Date.now() - 172800000).toISOString(),
-      read: true
-    },
-    unreadCount: 0
-  }
-];
-
-const DUMMY_MESSAGES: { [key: string]: Message[] } = {
-  'chat-1': [
-    {
-      _id: 'msg-1',
-      chatId: 'chat-1',
-      sender: {
-        _id: '1',
-        name: 'Vivek Pathak',
-        email: 'vivek@example.com',
-        avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
-      },
-      content: 'Hi! How are you doing?',
-      messageType: 'text',
-      readBy: [],
-      createdAt: new Date(Date.now() - 7200000).toISOString()
-    },
-    {
-      _id: 'msg-2',
-      chatId: 'chat-1',
-      sender: {
-        _id: 'me',
-        name: 'You',
-        email: 'you@example.com',
-        avatarUrl: 'https://ui-avatars.com/api/?name=You'
-      },
-      content: 'Hey! I\'m good, thanks! Working on the project.',
-      messageType: 'text',
-      readBy: ['1'],
-      createdAt: new Date(Date.now() - 7000000).toISOString()
-    },
-    {
-      _id: 'msg-3',
-      chatId: 'chat-1',
-      sender: {
-        _id: '1',
-        name: 'Vivek Pathak',
-        email: 'vivek@example.com',
-        avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
-      },
-      content: 'Hey, have you started working on the project yet?',
-      messageType: 'text',
-      readBy: [],
-      createdAt: new Date().toISOString()
-    }
-  ],
-  'chat-2': [
-    {
-      _id: 'msg-4',
-      chatId: 'chat-2',
-      sender: {
-        _id: '2',
-        name: 'Nisha Sharma',
-        email: 'nisha@example.com',
-        avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
-      },
-      content: 'I found some great resources for our research paper!',
-      messageType: 'text',
-      readBy: [],
-      createdAt: new Date(Date.now() - 3600000).toISOString()
-    }
-  ],
-  'chat-3': [
-    {
-      _id: 'msg-5',
-      chatId: 'chat-3',
-      sender: {
-        _id: '3',
-        name: 'Marcus Rodriguez',
-        email: 'marcus@example.com',
-        avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
-      },
-      content: 'Can we schedule a study session for tomorrow?',
-      messageType: 'text',
-      readBy: [],
-      createdAt: new Date(Date.now() - 86400000).toISOString()
-    }
-  ],
-  'chat-4': [
-    {
-      _id: 'msg-6',
-      chatId: 'chat-4',
-      sender: {
-        _id: '4',
-        name: 'Priya Patel',
-        email: 'priya@example.com',
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
-      },
-      content: 'Thanks for helping with the calculus problem!',
-      messageType: 'text',
-      readBy: [],
-      createdAt: new Date(Date.now() - 172800000).toISOString()
-    }
-  ]
-};
+// No dummy data - conversations will be fetched from connected users
 
 const Messaging: React.FC = () => {
   const { user } = useAuth();
@@ -288,7 +127,7 @@ const Messaging: React.FC = () => {
   const { socket, isConnected } = useSocket(token);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [conversations, setConversations] = useState<Conversation[]>(DUMMY_CONVERSATIONS);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -301,6 +140,8 @@ const Messaging: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const prevMessagesLengthRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -389,7 +230,7 @@ const Messaging: React.FC = () => {
     socket.on('newMessage', (message: Message) => {
       if (message.chatId === selectedConversation.chatId) {
         setMessages(prev => [...prev, message]);
-        scrollToBottom();
+        // scrollToBottom(); // Removed to let useEffect handle it intelligently
 
         // If message is from someone else, mark as delivered and read
         if (message.sender._id !== user?.id && message.sender._id !== user?._id) {
@@ -437,10 +278,43 @@ const Messaging: React.FC = () => {
     };
   }, [socket, selectedConversation, user]);
 
-  // Scroll to bottom when messages change
+  // Intelligent scroll to bottom
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (messages.length === 0) {
+      prevMessagesLengthRef.current = 0;
+      return;
+    }
+
+    const container = messagesContainerRef.current;
+    const isNewMessage = messages.length > prevMessagesLengthRef.current;
+    const isInitialLoad = prevMessagesLengthRef.current === 0;
+
+    // Always scroll on initial load
+    if (isInitialLoad) {
+      scrollToBottom();
+      prevMessagesLengthRef.current = messages.length;
+      return;
+    }
+
+    if (isNewMessage) {
+      const lastMessage = messages[messages.length - 1];
+      const isFromMe = lastMessage?.sender._id === user?.id || lastMessage?.sender._id === user?._id;
+
+      if (!container) {
+        scrollToBottom();
+      } else {
+        // Calculate distance from bottom
+        const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+        const isNearBottom = distanceFromBottom < 200; // 200px threshold
+
+        if (isFromMe || isNearBottom) {
+          scrollToBottom();
+        }
+      }
+    }
+
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages, user]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'nearest' });
@@ -448,22 +322,75 @@ const Messaging: React.FC = () => {
 
   const fetchConversations = async () => {
     try {
-      const data = await apiFetch('/messages/conversations');
-      setConversations(data || DUMMY_CONVERSATIONS);
+      // First, try to fetch existing conversations from messages API
+      const conversationsData = await apiFetch('/messages/conversations');
+
+      if (conversationsData && conversationsData.length > 0) {
+        setConversations(conversationsData);
+        return;
+      }
+
+      // If no conversations exist, fetch connected users
+      console.log('No existing conversations, fetching connected users...');
+      const connectionsData = await apiFetch('/connections');
+
+      if (!connectionsData || connectionsData.length === 0) {
+        console.log('No connections found');
+        setConversations([]);
+        return;
+      }
+
+      // Transform connections into conversation format
+      const connectedConversations: Conversation[] = connectionsData
+        .filter((conn: any) => conn.status === 'accepted') // Only show accepted connections
+        .map((conn: any) => {
+          // Determine the other user (not the current user)
+          const otherUser = conn.requester?._id === user?.id || conn.requester?._id === user?._id
+            ? conn.recipient
+            : conn.requester;
+
+          if (!otherUser) return null;
+
+          // Create chatId (consistent format: smaller ID first)
+          const ids = [user?.id || user?._id || '', otherUser._id || otherUser.id].sort();
+          const chatId = `${ids[0]}-${ids[1]}`;
+
+          return {
+            chatId,
+            user: {
+              id: otherUser._id || otherUser.id,
+              name: otherUser.name || 'User',
+              email: otherUser.email || '',
+              avatar: otherUser.profile?.avatarUrl || otherUser.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser.name || 'User')}`,
+              online: false // We can add online status later via socket
+            },
+            lastMessage: {
+              text: 'Start a conversation',
+              timestamp: new Date().toISOString(),
+              read: true
+            },
+            unreadCount: 0
+          };
+        })
+        .filter((conv: Conversation | null) => conv !== null) as Conversation[];
+
+      setConversations(connectedConversations);
+      console.log(`Loaded ${connectedConversations.length} connected users`);
     } catch (err) {
-      console.error('Failed to fetch conversations, using dummy data:', err);
-      setConversations(DUMMY_CONVERSATIONS);
+      console.error('Failed to fetch conversations:', err);
+      setConversations([]); // Show empty list instead of dummy data
     }
   };
+
 
   const fetchMessages = async (chatId: string) => {
     try {
       const data = await apiFetch(`/messages/conversation?chatId=${chatId}`);
-      setMessages(data || DUMMY_MESSAGES[chatId] || []);
+      setMessages(data || []);
       markAsRead(chatId);
     } catch (err) {
-      console.error('Failed to fetch messages, using dummy data:', err);
-      setMessages(DUMMY_MESSAGES[chatId] || []);
+      console.error('Failed to fetch messages:', err);
+      setMessages([]); // Show empty conversation instead of dummy data
     }
   };
 
@@ -1025,7 +952,7 @@ const Messaging: React.FC = () => {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-grow-1 overflow-auto p-4 bg-body-tertiary" style={{ minHeight: 0 }}>
+                <div ref={messagesContainerRef} className="flex-grow-1 overflow-auto p-4 bg-body-tertiary" style={{ minHeight: 0 }}>
                   <div className="d-flex flex-column gap-3">
                     {Object.entries(groupMessagesByDate(messages)).map(([dateLabel, dateMessages]) => (
                       <div key={dateLabel}>

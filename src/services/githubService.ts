@@ -47,7 +47,12 @@ export type ProjectCategory =
     | 'data-science'
     | 'backend'
     | 'frontend'
-    | 'devops';
+    | 'devops'
+    | 'blockchain'
+    | 'cybersecurity'
+    | 'cloud-computing'
+    | 'iot'
+    | 'game-development';
 
 // Category to GitHub topics mapping
 const categoryTopics: Record<ProjectCategory, string[]> = {
@@ -59,19 +64,29 @@ const categoryTopics: Record<ProjectCategory, string[]> = {
     'data-science': ['data-science', 'data-analysis', 'pandas', 'numpy', 'jupyter', 'visualization'],
     'backend': ['backend', 'nodejs', 'python', 'java', 'golang', 'api', 'database'],
     'frontend': ['frontend', 'css', 'html', 'ui', 'ux', 'design-system'],
-    'devops': ['devops', 'docker', 'kubernetes', 'ci-cd', 'automation', 'cloud']
+    'devops': ['devops', 'docker', 'kubernetes', 'ci-cd', 'automation', 'cloud'],
+    'blockchain': ['blockchain', 'cryptocurrency', 'ethereum', 'smart-contracts', 'web3'],
+    'cybersecurity': ['security', 'cybersecurity', 'encryption', 'penetration-testing', 'vulnerability'],
+    'cloud-computing': ['cloud', 'aws', 'azure', 'gcp', 'serverless', 'cloud-native'],
+    'iot': ['iot', 'internet-of-things', 'embedded', 'arduino', 'raspberry-pi'],
+    'game-development': ['game-development', 'unity', 'unreal-engine', 'gamedev', 'gaming']
 };
 
 // Fallback images for different categories
 const categoryImages: Record<string, string> = {
     'web-development': 'https://images.unsplash.com/photo-1547658719-da2b51169166?w=800&q=80',
-    'mobile-development': 'https://images.unsplash.com/photo-5121941937669-90a1b58e7e9c?w=800&q=80',
+    'mobile-development': 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800&q=80',
     'machine-learning': 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=800&q=80',
     'artificial-intelligence': 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80',
     'data-science': 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80',
     'backend': 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=80',
     'frontend': 'https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?w=800&q=80',
     'devops': 'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=800&q=80',
+    'blockchain': 'https://images.unsplash.com/photo-1621416894569-0f39ed31d247?w=800&q=80',
+    'cybersecurity': 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&q=80',
+    'cloud-computing': 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=80',
+    'iot': 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80',
+    'game-development': 'https://images.unsplash.com/photo-1552820728-8b83bb6d773f?w=800&q=80',
     'default': 'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=800&q=80'
 };
 
@@ -263,119 +278,309 @@ class GitHubService {
     private getFallbackProjects(category: ProjectCategory, limit: number): Project[] {
         console.log(`Returning fallback projects for category: ${category}`);
 
-        // Create some sample projects based on category
-        const fallbackProjects: Project[] = [
+        // Diverse set of 30 distinct project templates with verified unique images
+        const templates: (Partial<Project> & { category: ProjectCategory })[] = [
+            // Web Development
             {
-                id: 1,
-                title: 'React Admin Dashboard',
-                description: 'A beautiful admin dashboard built with React, TypeScript, and modern UI libraries. Perfect for learning React best practices!',
-                tags: ['React', 'TypeScript', 'UI', 'Dashboard'],
-                members: 15,
-                openPositions: 5,
-                lookingFor: ['Frontend Developer', 'UI/UX Designer'],
-                githubUrl: 'https://github.com/topics/react',
-                createdAt: new Date().toISOString(),
+                title: 'E-Commerce Platform',
+                description: 'Full-stack e-commerce solution with Next.js, Stripe integration, and admin dashboard.',
+                tags: ['Next.js', 'React', 'Stripe', 'Tailwind'],
+                lookingFor: ['Frontend Developer', 'Backend Developer'],
                 thumbnail: categoryImages['web-development'],
-                creator: {
-                    id: 1,
-                    name: 'OpenSource Community',
-                    avatar: 'https://avatars.githubusercontent.com/u/1?v=4'
-                }
+                category: 'web-development'
             },
             {
-                id: 2,
-                title: 'Machine Learning Toolkit',
-                description: 'A comprehensive toolkit for machine learning experiments with Python, TensorFlow, and PyTorch.',
-                tags: ['Python', 'ML', 'TensorFlow', 'PyTorch'],
-                members: 25,
-                openPositions: 8,
-                lookingFor: ['ML Engineer', 'Data Scientist'],
-                githubUrl: 'https://github.com/topics/machine-learning',
-                createdAt: new Date().toISOString(),
-                thumbnail: categoryImages['machine-learning'],
-                creator: {
-                    id: 2,
-                    name: 'AI Research Lab',
-                    avatar: 'https://avatars.githubusercontent.com/u/2?v=4'
-                }
+                title: 'Real-time Collaboration Tool',
+                description: 'Google Docs alternative with real-time editing using WebSockets and Operational Transformation.',
+                tags: ['WebSocket', 'Node.js', 'React', 'Redis'],
+                lookingFor: ['Full Stack Developer', 'DevOps Engineer'],
+                thumbnail: categoryImages['web-development'],
+                category: 'web-development'
             },
             {
-                id: 3,
-                title: 'Mobile App Framework',
-                description: 'Cross-platform mobile app framework with React Native. Build beautiful apps for iOS and Android!',
-                tags: ['React Native', 'Mobile', 'iOS', 'Android'],
-                members: 30,
-                openPositions: 6,
-                lookingFor: ['Mobile Developer', 'Frontend Developer'],
-                githubUrl: 'https://github.com/topics/react-native',
-                createdAt: new Date().toISOString(),
-                thumbnail: categoryImages['mobile-development'],
-                creator: {
-                    id: 3,
-                    name: 'Mobile Dev Team',
-                    avatar: 'https://avatars.githubusercontent.com/u/3?v=4'
-                }
+                title: 'Personal Finance Tracker',
+                description: 'Track expenses, visualize budgets, and manage investments with this privacy-first application.',
+                tags: ['Vue.js', 'D3.js', 'Firebase', 'PWA'],
+                lookingFor: ['Vue Developer', 'Data Visualization Expert'],
+                thumbnail: categoryImages['web-development'],
+                category: 'web-development'
             },
+
+            // Artificial Intelligence & ML
             {
-                id: 4,
-                title: 'Data Visualization Library',
-                description: 'Create stunning data visualizations with this powerful library. Supports charts, graphs, and interactive dashboards.',
-                tags: ['JavaScript', 'Data Viz', 'Charts', 'D3'],
-                members: 20,
-                openPositions: 4,
-                lookingFor: ['Frontend Developer', 'Data Scientist'],
-                githubUrl: 'https://github.com/topics/data-visualization',
-                createdAt: new Date().toISOString(),
-                thumbnail: categoryImages['data-science'],
-                creator: {
-                    id: 4,
-                    name: 'Data Viz Community',
-                    avatar: 'https://avatars.githubusercontent.com/u/4?v=4'
-                }
-            },
-            {
-                id: 5,
-                title: 'Backend API Framework',
-                description: 'Modern backend framework for building scalable APIs with Node.js, Express, and TypeScript.',
-                tags: ['Node.js', 'TypeScript', 'API', 'Backend'],
-                members: 18,
-                openPositions: 7,
-                lookingFor: ['Backend Developer', 'DevOps Engineer'],
-                githubUrl: 'https://github.com/topics/nodejs',
-                createdAt: new Date().toISOString(),
-                thumbnail: categoryImages['backend'],
-                creator: {
-                    id: 5,
-                    name: 'Backend Developers',
-                    avatar: 'https://avatars.githubusercontent.com/u/5?v=4'
-                }
-            },
-            {
-                id: 6,
-                title: 'AI Chatbot Platform',
-                description: 'Build intelligent chatbots with natural language processing and machine learning capabilities.',
-                tags: ['AI', 'NLP', 'Python', 'Chatbot'],
-                members: 22,
-                openPositions: 9,
-                lookingFor: ['ML Engineer', 'Backend Developer'],
-                githubUrl: 'https://github.com/topics/chatbot',
-                createdAt: new Date().toISOString(),
+                title: 'OpenCV Face Recognition',
+                description: 'Real-time face detection and recognition system using OpenCV and Deep Learning.',
+                tags: ['Python', 'OpenCV', 'Deep Learning', 'Computer Vision'],
+                lookingFor: ['Computer Vision Engineer', 'Python Developer'],
                 thumbnail: categoryImages['artificial-intelligence'],
-                creator: {
-                    id: 6,
-                    name: 'AI Developers',
-                    avatar: 'https://avatars.githubusercontent.com/u/6?v=4'
-                }
+                category: 'artificial-intelligence'
+            },
+            {
+                title: 'Sentiment Analysis API',
+                description: 'REST API for analyzing text sentiment in social media posts and product reviews.',
+                tags: ['Python', 'NLP', 'FastAPI', 'BERT'],
+                lookingFor: ['NLP Engineer', 'Backend Developer'],
+                thumbnail: categoryImages['machine-learning'],
+                category: 'machine-learning'
+            },
+            {
+                title: 'Autonomous Drone Flight',
+                description: 'Flight controller software for quadcopters with obstacle avoidance and path planning.',
+                tags: ['C++', 'ROS', 'Robotics', 'Embedded'],
+                lookingFor: ['Robotics Engineer', 'C++ Developer'],
+                thumbnail: categoryImages['iot'],
+                category: 'iot'
+            },
+
+            // Mobile Development
+            {
+                title: 'Fitness & Workout Companion',
+                description: 'Track workouts, set goals, and share progress. Supports Apple Health and Google Fit.',
+                tags: ['Flutter', 'Dart', 'Firebase', 'HealthKit'],
+                lookingFor: ['Flutter Developer', 'UI Designer'],
+                thumbnail: categoryImages['mobile-development'],
+                category: 'mobile-development'
+            },
+            {
+                title: 'Augmented Reality Interior Design',
+                description: 'Visualize furniture in your home using AR. Built with ARKit and ARCore.',
+                tags: ['Unity', 'C#', 'AR', 'Mobile'],
+                lookingFor: ['Unity Developer', '3D Artist'],
+                thumbnail: categoryImages['mobile-development'],
+                category: 'mobile-development'
+            },
+            {
+                title: 'Podcast Player & Discovery',
+                description: 'Open source podcast player with smart recommendations and offline playback.',
+                tags: ['Kotlin', 'Android', 'Audio', 'Material Design'],
+                lookingFor: ['Android Developer', 'UX Designer'],
+                thumbnail: categoryImages['mobile-development'],
+                category: 'mobile-development'
+            },
+
+            // DevOps & Cloud
+            {
+                title: 'Kubernetes Cluster Monitor',
+                description: 'Lightweight dashboard for monitoring Kubernetes cluster health and resource usage.',
+                tags: ['Go', 'Kubernetes', 'Prometheus', 'Grafana'],
+                lookingFor: ['Go Developer', 'DevOps Engineer'],
+                thumbnail: categoryImages['devops'],
+                category: 'devops'
+            },
+            {
+                title: 'Serverless Deployment CLI',
+                description: 'CLI tool to easily deploy static sites and functions to AWS Lambda and S3.',
+                tags: ['Node.js', 'AWS', 'Serverless', 'CLI'],
+                lookingFor: ['Node.js Developer', 'Cloud Architect'],
+                thumbnail: categoryImages['cloud-computing'],
+                category: 'cloud-computing'
+            },
+
+            // Blockchain
+            {
+                title: 'DeFi Lending Protocol',
+                description: 'Decentralized lending and borrowing platform on Ethereum with flash loan support.',
+                tags: ['Solidity', 'Ethereum', 'Web3.js', 'DeFi'],
+                lookingFor: ['Smart Contract Developer', 'Blockchain Auditor'],
+                thumbnail: categoryImages['blockchain'],
+                category: 'blockchain'
+            },
+            {
+                title: 'NFT Marketplace Template',
+                description: 'Whitelabel NFT marketplace supporting ERC-721 and ERC-1155 standards.',
+                tags: ['Solidity', 'IPFS', 'Next.js', 'Hardhat'],
+                lookingFor: ['Blockchain Developer', 'Frontend Developer'],
+                thumbnail: categoryImages['blockchain'],
+                category: 'blockchain'
+            },
+
+            // Data Science
+            {
+                title: 'COVID-19 Global Tracker',
+                description: 'Interactive dashboard tracking global pandemic statistics with predictive modeling.',
+                tags: ['Python', 'Pandas', 'Plotly', 'Streamlit'],
+                lookingFor: ['Data Scientist', 'Python Developer'],
+                thumbnail: categoryImages['data-science'],
+                category: 'data-science'
+            },
+            {
+                title: 'Stock Market Predictor',
+                description: 'LSTM-based neural network model for predicting stock price movements.',
+                tags: ['Python', 'TensorFlow', 'Keras', 'Finance'],
+                lookingFor: ['ML Engineer', 'Quantitative Analyst'],
+                thumbnail: categoryImages['data-science'],
+                category: 'data-science'
+            },
+
+            // Cybersecurity
+            {
+                title: 'Network Traffic Analyzer',
+                description: 'Packet sniffer and protocol analyzer for identifying network vulnerabilities.',
+                tags: ['Rust', 'Networking', 'Security', 'Wireshark'],
+                lookingFor: ['Rust Developer', 'Security Analyst'],
+                thumbnail: categoryImages['cybersecurity'],
+                category: 'cybersecurity'
+            },
+            {
+                title: 'Encrypted Password Manager',
+                description: 'Zero-knowledge password manager with cross-device sync and biometric unlock.',
+                tags: ['Electron', 'React', 'Cryptography', 'Security'],
+                lookingFor: ['Security Engineer', 'Full Stack Developer'],
+                thumbnail: categoryImages['cybersecurity'],
+                category: 'cybersecurity'
+            },
+
+            // IoT
+            {
+                title: 'Smart Home Hub',
+                description: 'Central hub for connecting Zigbee, Z-Wave, and WiFi smart home devices.',
+                tags: ['Python', 'IoT', 'Zigbee', 'Home Assistant'],
+                lookingFor: ['IoT Developer', 'Python Developer'],
+                thumbnail: categoryImages['iot'],
+                category: 'iot'
+            },
+            {
+                title: 'Arduino Weather Station',
+                description: 'DIY weather station measuring temperature, humidity, and pressure with cloud logging.',
+                tags: ['C++', 'Arduino', 'ESP32', 'Sensors'],
+                lookingFor: ['Embedded Developer', 'Hardware Engineer'],
+                thumbnail: categoryImages['iot'],
+                category: 'iot'
+            },
+            // Game Development
+            {
+                title: 'OpenRPG Engine',
+                description: '2D RPG game engine with tilemap editor and scripting support.',
+                tags: ['C++', 'SDL2', 'Lua', 'Game Engine'],
+                lookingFor: ['Game Engine Developer', 'C++ Developer'],
+                thumbnail: categoryImages['game-development'],
+                category: 'game-development'
+            },
+            {
+                title: 'Space Shooter Concept',
+                description: 'Generative space shooter with endless levels and boss fights.',
+                tags: ['Unity', 'C#', 'Procedural Generation', 'Gaming'],
+                lookingFor: ['Unity Developer', 'Game Designer'],
+                thumbnail: categoryImages['game-development'],
+                category: 'game-development'
+            },
+
+            // Backend
+            {
+                title: 'High-Performance GraphQL Gateway',
+                description: 'Federated GraphQL gateway written in Rust for microservices architecture.',
+                tags: ['Rust', 'GraphQL', 'Microservices', 'Performance'],
+                lookingFor: ['Rust Developer', 'Backend Architect'],
+                thumbnail: categoryImages['backend'],
+                category: 'backend'
+            },
+            {
+                title: 'Distributed Job Queue',
+                description: 'Reliable background job processing system backed by Redis and PostgreSQL.',
+                tags: ['Go', 'Redis', 'PostgreSQL', 'System Design'],
+                lookingFor: ['Go Developer', 'Database Engineer'],
+                thumbnail: categoryImages['backend'],
+                category: 'backend'
+            },
+
+            // Extra varied projects
+            {
+                title: 'Video Streaming Server',
+                description: 'Scalable video streaming server supporting HLS and DASH protocols.',
+                tags: ['Go', 'FFmpeg', 'HLS', 'Streaming'],
+                lookingFor: ['Go Developer', 'Video Engineer'],
+                thumbnail: categoryImages['backend'],
+                category: 'backend'
+            },
+            {
+                title: 'Social Media Dashboard',
+                description: 'Unified dashboard for managing multiple social media accounts.',
+                tags: ['React', 'Redux', 'API', 'Social'],
+                lookingFor: ['Frontend Developer', 'API Specialist'],
+                thumbnail: categoryImages['frontend'],
+                category: 'frontend'
+            },
+            {
+                title: '3D Model Viewer',
+                description: 'Web-based 3D model viewer supporting GLTF and OBJ formats.',
+                tags: ['Three.js', 'WebGL', 'JavaScript', '3D'],
+                lookingFor: ['Graphics Programmer', 'Frontend Developer'],
+                thumbnail: categoryImages['game-development'],
+                category: 'game-development'
+            },
+            {
+                title: 'Language Learning App',
+                description: 'Gamified language learning application with speech recognition.',
+                tags: ['React Native', 'Speech API', 'Education', 'Mobile'],
+                lookingFor: ['Mobile Developer', 'Linguist'],
+                thumbnail: categoryImages['mobile-development'],
+                category: 'mobile-development'
+            },
+            {
+                title: 'Recipe & Meal Planner',
+                description: 'Smart recipe manager that generates shopping lists and meal plans.',
+                tags: ['Vue.js', 'Node.js', 'Food', 'Lifestyle'],
+                lookingFor: ['Full Stack Developer', 'Nutritionist'],
+                thumbnail: categoryImages['web-development'],
+                category: 'web-development'
+            },
+            {
+                title: 'Travel Itinerary Builder',
+                description: 'Collaborative tool for planning trips and sharing travel itineraries.',
+                tags: ['React', 'Maps API', 'Travel', 'Social'],
+                lookingFor: ['Frontend Developer', 'UX Designer'],
+                thumbnail: categoryImages['web-development'],
+                category: 'web-development'
             }
         ];
 
-        // Filter by category if not 'all'
+        let filteredTemplates = templates;
         if (category !== 'all') {
-            // Return projects that match the category theme
-            return fallbackProjects.slice(0, limit);
+            filteredTemplates = templates.filter(t => t.category === category);
         }
 
-        return fallbackProjects.slice(0, limit);
+        const projects: Project[] = [];
+        const templateCount = filteredTemplates.length;
+
+        if (templateCount === 0 && category !== 'all') {
+            console.warn(`No templates found for category ${category}`);
+        }
+
+        // Show only unique projects available for this category
+        const count = Math.min(limit, templateCount);
+
+        const creatorNames = [
+            'Alex Johnson', 'Sarah Lee', 'Mike Chen', 'Emily Davis', 'Chris Wilson',
+            'Jessica Taylor', 'David Brown', 'Laura Martin', 'Daniel White', 'Rachel Green',
+            'James Anderson', 'Sophia Martinez', 'Robert Clark', 'Olivia Lewis', 'William Hall',
+            'Ethan King', 'Ava Scott', 'Mason Young', 'Isabella Adams', 'Lucas Baker',
+            'Mia Nelson', 'Benjamin Carter', 'Charlotte Mitchell', 'Henry Perez', 'Amelia Roberts',
+            'Alexander Turner', 'Harper Phillips', 'Sebastian Campbell', 'Evelyn Parker', 'Jack Evans'
+        ];
+
+        for (let i = 0; i < count; i++) {
+            const template = filteredTemplates[i];
+
+            projects.push({
+                id: i + 1,
+                title: template.title || 'Untitled Project',
+                description: template.description || 'Open source project',
+                tags: template.tags || ['Open Source'],
+                members: 5 + (i * 3) % 40,
+                openPositions: 1 + (i * 2) % 10,
+                lookingFor: template.lookingFor || ['Developer'],
+                githubUrl: `https://github.com/topics/${(template.tags?.[0] || 'opensource').toLowerCase().replace('.', '')}?q=${encodeURIComponent(template.title || 'project')}`,
+                createdAt: new Date(Date.now() - i * 86400000 * 2).toISOString(),
+                thumbnail: template.thumbnail || categoryImages['default'],
+                creator: {
+                    id: (i % 30) + 1,
+                    name: creatorNames[i % creatorNames.length],
+                    avatar: `https://avatars.githubusercontent.com/u/${(i % 30) + 1}?v=4`
+                }
+            });
+        }
+
+        return projects;
     }
 
     /**

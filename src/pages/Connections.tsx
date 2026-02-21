@@ -98,7 +98,7 @@ const Connections: React.FC = () => {
             interests: u.profile?.interests || [],
             skills: (u.profile?.skills || []).map((s: string) => s.split(' - ')[0]), // Remove skill level for badges
             skillsWithLevel: u.profile?.skills || [], // Keep full skill strings with levels
-            avatar: u.profile?.avatarUrl || u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || 'User')}`,
+            avatar: u.profile?.avatarUrl || u.avatar || u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || 'User')}`,
             mutualConnections: 0 // TODO: Calculate actual mutual connections
           };
         });

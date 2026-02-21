@@ -24,7 +24,8 @@ export default function Login() {
       if (resp?.access) {
         localStorage.setItem('sc_token', resp.access);
         await loginWithToken(resp.access);
-        await loginWithToken(resp.access);
+        // Wait a bit to ensure user data is fully loaded and propagated through context
+        await new Promise(resolve => setTimeout(resolve, 300));
         nav(from, { replace: true });
       } else throw new Error('No token returned');
     } catch (err: any) {

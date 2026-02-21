@@ -26,6 +26,10 @@ const Projects: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 9;
+
   // New Project Modal State
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -46,6 +50,7 @@ const Projects: React.FC = () => {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [generatedImageFile, setGeneratedImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState('');
+  const [imageKeyword, setImageKeyword] = useState(''); // Custom keyword for AI image generation
 
   // Category options
   const categories: { value: ProjectCategory; label: string }[] = [
@@ -57,7 +62,12 @@ const Projects: React.FC = () => {
     { value: 'data-science', label: 'Data Science' },
     { value: 'backend', label: 'Backend' },
     { value: 'frontend', label: 'Frontend' },
-    { value: 'devops', label: 'DevOps' }
+    { value: 'devops', label: 'DevOps' },
+    { value: 'blockchain', label: 'Blockchain' },
+    { value: 'cybersecurity', label: 'Cybersecurity' },
+    { value: 'cloud-computing', label: 'Cloud Computing' },
+    { value: 'iot', label: 'Internet of Things' },
+    { value: 'game-development', label: 'Game Development' }
   ];
 
   // Map backend project to frontend Project interface
@@ -167,6 +177,16 @@ const Projects: React.FC = () => {
     return true;
   });
 
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentProjects = filteredProjects.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterStatus, filterTags, category]);
+
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -240,43 +260,188 @@ const Projects: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // Generate AI image based on title
+  // Generate AI image based on title or custom keyword
   const handleGenerateImage = async () => {
-    if (!formData.title || formData.title.length < 3) {
-      return; // Don't generate for very short titles
+    // Use custom keyword if provided, otherwise use title
+    const searchTerm = imageKeyword.trim() || formData.title;
+
+    if (!searchTerm || searchTerm.length < 3) {
+      return; // Don't generate for very short inputs
     }
 
     setGeneratingImage(true);
     try {
-      // Create a prompt based on the project title and categories
+      // Create a prompt based on custom keyword or project title and categories
       const categoryHints = formData.categories.length > 0
         ? formData.categories.join(', ')
         : 'technology';
 
-      const prompt = `A modern, professional project card thumbnail for a ${categoryHints} project titled "${formData.title}". Technology-themed, vibrant gradient colors, abstract geometric shapes, clean and minimalist design, suitable for a developer portfolio. High quality, 16:9 aspect ratio.`;
+      const prompt = imageKeyword.trim()
+        ? `A modern, professional project card thumbnail for "${imageKeyword}". Technology-themed, vibrant gradient colors, abstract geometric shapes, clean and minimalist design, suitable for a developer portfolio. High quality, 16:9 aspect ratio.`
+        : `A modern, professional project card thumbnail for a ${categoryHints} project titled "${formData.title}". Technology-themed, vibrant gradient colors, abstract geometric shapes, clean and minimalist design, suitable for a developer portfolio. High quality, 16:9 aspect ratio.`;
 
       console.log('Generating image with prompt:', prompt);
 
-      // Note: In a real implementation, you would call an AI image generation API
-      // For now, we'll use a placeholder approach
-      // The generate_image tool would be called here in the actual implementation
+      // Try to generate image using DALL-E 3 API
+      let imageUrl = '';
+      const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
-      // Simulating image generation delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (openaiApiKey) {
+        try {
+          console.log('Calling DALL-E 3 API...');
+          const response = await fetch('https://api.openai.com/v1/images/generations', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiApiKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: "dall-e-3",
+              prompt: prompt,
+              n: 1,
+              size: "1792x1024", // 16:9 aspect ratio
+              quality: "standard",
+              style: "vivid" // More vibrant and hyper-real
+            })
+          });
 
-      // For demonstration, we'll use a category-based image
-      const categoryImages: Record<string, string> = {
-        'web-development': 'https://images.unsplash.com/photo-1547658719-da2b51169166?w=800&q=80',
-        'mobile-development': 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800&q=80',
-        'machine-learning': 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=800&q=80',
-        'artificial-intelligence': 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80',
-        'data-science': 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80',
-        'backend': 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=80',
-        'frontend': 'https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?w=800&q=80',
-        'devops': 'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=800&q=80'
-      };
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error('DALL-E 3 API error:', errorData);
+            throw new Error(`API error: ${errorData.error?.message || 'Unknown error'}`);
+          }
 
-      const imageUrl = categoryImages[formData.categories[0]] || 'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=800&q=80';
+          const data = await response.json();
+          imageUrl = data.data[0].url;
+          console.log('DALL-E 3 image generated successfully!');
+        } catch (apiError) {
+          console.error('Failed to generate image with DALL-E 3:', apiError);
+          console.log('Falling back to category-based images...');
+          // Fall through to fallback logic below
+        }
+      } else {
+        console.log('No OpenAI API key found, using fallback images');
+      }
+
+      // Fallback to category-based Unsplash images if DALL-E fails or no API key
+      if (!imageUrl) {
+        // Multiple images per category for variety when regenerating
+        const categoryImages: Record<string, string[]> = {
+          'web-development': [
+            'https://images.unsplash.com/photo-1547658719-da2b51169166?w=800&q=80',
+            'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&q=80',
+            'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&q=80',
+            'https://images.unsplash.com/photo-1593720213428-28a5b9e94613?w=800&q=80'
+          ],
+          'mobile-development': [
+            'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800&q=80',
+            'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=800&q=80',
+            'https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?w=800&q=80',
+            'https://images.unsplash.com/photo-1526498460520-4c246339dccb?w=800&q=80'
+          ],
+          'machine-learning': [
+            'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=800&q=80',
+            'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&q=80',
+            'https://images.unsplash.com/photo-1591453089816-0fbb971b454c?w=800&q=80',
+            'https://images.unsplash.com/photo-1527474305487-b87b222841cc?w=800&q=80'
+          ],
+          'artificial-intelligence': [
+            'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80',
+            'https://images.unsplash.com/photo-1655720828018-edd2daec9349?w=800&q=80',
+            'https://images.unsplash.com/photo-1620825937374-87fc7d6bddc2?w=800&q=80',
+            'https://images.unsplash.com/photo-1676277791608-ac5c30be1b0e?w=800&q=80'
+          ],
+          'data-science': [
+            'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80',
+            'https://images.unsplash.com/photo-1543286386-713bdd548da4?w=800&q=80',
+            'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80',
+            'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=800&q=80'
+          ],
+          'backend': [
+            'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=80',
+            'https://images.unsplash.com/photo-1629654297299-c8506221ca97?w=800&q=80',
+            'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&q=80',
+            'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&q=80'
+          ],
+          'frontend': [
+            'https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?w=800&q=80',
+            'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&q=80',
+            'https://images.unsplash.com/photo-1545665225-b23b99e4d45e?w=800&q=80',
+            'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=800&q=80'
+          ],
+          'devops': [
+            'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=800&q=80',
+            'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=800&q=80',
+            'https://images.unsplash.com/photo-1605745341112-85968b19335b?w=800&q=80',
+            'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=80'
+          ],
+          'blockchain': [
+            'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&q=80',
+            'https://images.unsplash.com/photo-1621416894569-0f39ed31d247?w=800&q=80',
+            'https://images.unsplash.com/photo-1644143379190-08a5f055de1d?w=800&q=80',
+            'https://images.unsplash.com/photo-1622630998477-20aa696ecb05?w=800&q=80'
+          ],
+          'cybersecurity': [
+            'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&q=80',
+            'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800&q=80',
+            'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=800&q=80',
+            'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&q=80'
+          ],
+          'cloud-computing': [
+            'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&q=80',
+            'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=80',
+            'https://images.unsplash.com/photo-1559028012-481c04fa702d?w=800&q=80',
+            'https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?w=800&q=80'
+          ],
+          'iot': [
+            'https://images.unsplash.com/photo-1558346490-a72e53ae2d4f?w=800&q=80',
+            'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80',
+            'https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?w=800&q=80',
+            'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=800&q=80'
+          ],
+          'game-development': [
+            'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=800&q=80',
+            'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=800&q=80',
+            'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?w=800&q=80',
+            'https://images.unsplash.com/photo-1556438064-2d7646166914?w=800&q=80'
+          ]
+        };
+
+        // Default fallback images
+        const defaultImages = [
+          'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=800&q=80',
+          'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&q=80',
+          'https://images.unsplash.com/photo-1484417894907-623942c8ee29?w=800&q=80',
+          'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&q=80'
+        ];
+
+        // Helper function to get random image from array
+        const getRandomImage = (images: string[]) => {
+          return images[Math.floor(Math.random() * images.length)];
+        };
+
+        if (imageKeyword.trim()) {
+          const keyword = imageKeyword.toLowerCase();
+          const matchedCategory = Object.keys(categoryImages).find(cat =>
+            keyword.includes(cat.replace('-', ' ')) || cat.replace('-', ' ').includes(keyword)
+          );
+
+          if (matchedCategory) {
+            imageUrl = getRandomImage(categoryImages[matchedCategory]);
+          } else if (formData.categories[0] && categoryImages[formData.categories[0]]) {
+            imageUrl = getRandomImage(categoryImages[formData.categories[0]]);
+          } else {
+            imageUrl = getRandomImage(defaultImages);
+          }
+        } else {
+          if (formData.categories[0] && categoryImages[formData.categories[0]]) {
+            imageUrl = getRandomImage(categoryImages[formData.categories[0]]);
+          } else {
+            imageUrl = getRandomImage(defaultImages);
+          }
+        }
+      }
+
       setImagePreviewUrl(imageUrl);
 
       console.log('Image generated successfully');
@@ -488,7 +653,7 @@ const Projects: React.FC = () => {
       {/* Projects Grid */}
       {!loading && !error && (
         <div className="row g-4">
-          {filteredProjects.length > 0 ? filteredProjects.map((project: Project) => <div key={project.id} className="col-md-6 col-lg-4">
+          {currentProjects.length > 0 ? currentProjects.map((project: Project) => <div key={project.id} className="col-md-6 col-lg-4">
             <div className="card h-100 border-0 shadow-sm overflow-hidden">
               <div className="position-relative" style={{
                 height: '200px',
@@ -561,6 +726,33 @@ const Projects: React.FC = () => {
           </div>}
         </div>
       )}
+
+      {/* Pagination Controls */}
+      {!loading && !error && filteredProjects.length > 0 && (
+        <div className="d-flex justify-content-center align-items-center mt-5 gap-3">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="btn btn-primary rounded-circle p-2 d-flex align-items-center justify-content-center"
+            style={{ width: '40px', height: '40px' }}
+          >
+            &lt;
+          </button>
+
+          <span className="fw-medium text-muted">
+            {currentPage} / {totalPages}
+          </span>
+
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="btn btn-primary rounded-circle p-2 d-flex align-items-center justify-content-center"
+            style={{ width: '40px', height: '40px' }}
+          >
+            &gt;
+          </button>
+        </div>
+      )}
     </div>
 
     {/* New Project Modal */}
@@ -587,6 +779,32 @@ const Projects: React.FC = () => {
                     maxLength={100}
                   />
                   {formErrors.title && <div className="invalid-feedback">{formErrors.title}</div>}
+                </div>
+
+                {/* Custom Keyword for AI Image Generation */}
+                <div className="mb-3">
+                  <label className="form-label fw-medium">AI Image Keyword (Optional)</label>
+                  <div className="input-group">
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={imageKeyword}
+                      onChange={(e) => setImageKeyword(e.target.value)}
+                      placeholder="e.g., blockchain, cloud, gaming, AI..."
+                      maxLength={50}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary"
+                      onClick={handleGenerateImage}
+                      disabled={generatingImage || (!imageKeyword.trim() && formData.title.length < 3)}
+                    >
+                      {generatingImage ? 'Generating...' : '🎨 Generate Image'}
+                    </button>
+                  </div>
+                  <small className="text-muted">
+                    Enter a keyword to generate a custom AI thumbnail, or leave blank to auto-generate based on title and categories
+                  </small>
                 </div>
 
                 {/* AI Generated Image Preview */}
