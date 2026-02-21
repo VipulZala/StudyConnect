@@ -8,7 +8,12 @@ const RefreshToken = require('../models/RefreshToken');
 
 // helper to issue access & refresh (same as authController)
 function issueTokensAndRedirect(res, user) {
-  const access = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.ACCESS_EXPIRES || '7d' });
+  const access = jwt.sign({
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    avatar: user.profile?.avatarUrl || user.avatarUrl || ''
+  }, process.env.JWT_SECRET, { expiresIn: process.env.ACCESS_EXPIRES || '7d' });
   const rawRefresh = genToken(64);
   const rt = new RefreshToken({
     user: user._id,

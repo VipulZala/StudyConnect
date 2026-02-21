@@ -50,7 +50,17 @@ const app = express();
 // --- CORS: allow frontend origin and cookies
 const FRONTEND_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 app.use(cors({
-  origin: FRONTEND_ORIGIN,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    // Allow the configured frontend origin
+    if (origin === FRONTEND_ORIGIN) return callback(null, true);
+    // Allow localhost for local dev
+    if (origin.startsWith('http://localhost')) return callback(null, true);
+    // Allow any vercel.app subdomain (in case preview URLs are used)
+    if (origin.endsWith('.vercel.app')) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 

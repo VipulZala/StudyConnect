@@ -1,81 +1,72 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+
+// Decode JWT payload without verifying (payload is public base64)
+function decodeJWT(token: string) {
+  try {
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return decoded;
+  } catch {
+    return null;
+  }
+}
 
 export default function OAuthSuccess() {
   const { loginWithToken } = useAuth();
   const navigate = useNavigate();
-  const [debugInfo, setDebugInfo] = useState<string>('Starting...');
-  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     const completeLogin = async () => {
       try {
-        // Step 1: Read the token from the URL
         const params = new URLSearchParams(window.location.search);
         const token = params.get('token');
-        const fullUrl = window.location.href;
-
-        setDebugInfo(`URL: ${fullUrl}`);
 
         if (!token) {
-          setError(`No token found in URL. Full URL was: ${fullUrl}`);
+          console.error('No token in URL');
+          navigate('/login?error=oauth_failed');
           return;
         }
 
-        setDebugInfo(`Token found (${token.substring(0, 20)}...). Calling loginWithToken...`);
+        // Decode user info from the JWT payload directly (no API call needed!)
+        const payload = decodeJWT(token);
+        if (!payload?.id) {
+          console.error('Invalid token payload');
+          navigate('/login?error=oauth_failed');
+          return;
+        }
 
-        // Step 2: Store the token
+        // Store token
         localStorage.setItem('sc_token', token);
 
-        // Step 3: Fetch user profile
-        const apiUrl = import.meta.env.VITE_API_URL;
-        setDebugInfo(`API URL: ${apiUrl}. Fetching /users/me...`);
+        // Store user info decoded from the token (avoids cross-domain fetch)
+        const user = {
+          _id: payload.id,
+          id: payload.id,
+          name: payload.name || '',
+          email: payload.email || '',
+          avatar: payload.avatar || ''
+        };
+        localStorage.setItem('sc_user', JSON.stringify(user));
 
-        const meResp = await fetch(`${apiUrl}/users/me`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        setDebugInfo(`/users/me status: ${meResp.status}`);
-
-        if (!meResp.ok) {
-          const errText = await meResp.text();
-          setError(`/users/me failed with ${meResp.status}: ${errText}`);
-          return;
+        // Now call loginWithToken — it will try /users/me but we already have user cached
+        try {
+          await loginWithToken(token);
+        } catch {
+          // Even if /users/me fails, we have the user from the token — navigate anyway
+          console.warn('loginWithToken failed, using token payload instead');
         }
 
-        const me = await meResp.json();
-        setDebugInfo(`Got user: ${me.name || me.email}. Navigating...`);
-
-        await loginWithToken(token);
         navigate('/');
       } catch (err: any) {
-        setError(`Exception: ${err?.message || String(err)}`);
+        console.error('OAuth success handler failed', err);
+        navigate('/login?error=oauth_failed');
       }
     };
 
     completeLogin();
   }, [loginWithToken, navigate]);
-
-  if (error) {
-    return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <div className="text-center p-4" style={{ maxWidth: 600 }}>
-          <div className="text-danger mb-3" style={{ fontSize: 48 }}>❌</div>
-          <h3 className="text-danger">OAuth Login Failed</h3>
-          <div className="alert alert-danger mt-3 text-start" style={{ wordBreak: 'break-all' }}>
-            <strong>Error:</strong> {error}
-          </div>
-          <div className="alert alert-secondary mt-2 text-start" style={{ wordBreak: 'break-all' }}>
-            <strong>Debug:</strong> {debugInfo}
-          </div>
-          <button className="btn btn-primary mt-3" onClick={() => navigate('/login')}>
-            Back to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="d-flex justify-content-center align-items-center vh-100">
@@ -84,7 +75,7 @@ export default function OAuthSuccess() {
           <span className="visually-hidden">Loading...</span>
         </div>
         <h3>Completing login...</h3>
-        <p className="text-muted small mt-2">{debugInfo}</p>
+        <p className="text-muted">Almost there!</p>
       </div>
     </div>
   );
